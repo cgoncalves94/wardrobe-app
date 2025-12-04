@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Home, Shirt, Sparkles, FolderOpen, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -27,22 +28,19 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center justify-center gap-0.5 py-2 px-3 min-h-[56px] transition-colors ${
-                isAdd
-                  ? "text-foreground"
-                  : isActive
-                    ? "text-foreground"
-                    : "text-muted-foreground"
-              }`}
+              className={cn(
+                "flex flex-col items-center justify-center gap-0.5 py-2 px-3 min-h-[56px] transition-colors",
+                isAdd || isActive ? "text-foreground" : "text-muted-foreground"
+              )}
             >
               {isAdd ? (
                 <div className="w-10 h-10 rounded-full bg-foreground flex items-center justify-center -mt-4 shadow-lg">
                   <Icon className="w-5 h-5 text-background" />
                 </div>
               ) : (
-                <Icon className={`w-5 h-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+                <Icon className={cn("w-5 h-5", isActive && "stroke-[2.5]")} />
               )}
-              <span className={`text-[10px] font-medium ${isAdd ? "mt-0.5" : ""}`}>{label}</span>
+              <span className={cn("text-[10px] font-medium", isAdd && "mt-0.5")}>{label}</span>
             </Link>
           );
         })}

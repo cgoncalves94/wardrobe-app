@@ -6,8 +6,7 @@ import { useTranslations } from "next-intl";
 import { Settings, LogOut } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import LogoutButton from "@/components/auth/LogoutButton";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useLogout } from "@/hooks/use-logout";
 import type { Locale } from "@/i18n/config";
 
 type Props = {
@@ -18,8 +17,7 @@ export default function Header({ currentLocale }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const t = useTranslations();
-  const router = useRouter();
-  const supabase = createClient();
+  const handleLogout = useLogout();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -33,12 +31,6 @@ export default function Header({ currentLocale }: Props) {
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [settingsOpen]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-sm">
