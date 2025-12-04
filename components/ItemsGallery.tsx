@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations, useFormatter } from "next-intl";
 import { Plus, Star, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
@@ -23,14 +24,12 @@ export type GalleryCategory = {
 };
 
 type Props = {
-  title?: string;
   items: GalleryItem[];
   categories: GalleryCategory[];
   onSelectCategory?: (id: string | null) => void;
 };
 
 export default function ItemsGallery({
-  title = "All Items",
   items: initialItems,
   categories,
   onSelectCategory,
@@ -43,6 +42,8 @@ export default function ItemsGallery({
   const [deleting, setDeleting] = useState(false);
 
   const supabase = createClient();
+  const t = useTranslations();
+  const format = useFormatter();
 
   // Close with Escape
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function ItemsGallery({
   }, [items, selectedCategoryId, showFavoritesOnly]);
 
   async function handleDelete(item: GalleryItem) {
-    if (!confirm(`Delete "${item.name}"?`)) return;
+    if (!confirm(t('items.deleteConfirm', { name: item.name }))) return;
 
     setDeleting(true);
     try {
@@ -103,9 +104,9 @@ export default function ItemsGallery({
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       setOpen(false);
       setSelectedItem(null);
-      toast.success("Item deleted");
+      toast.success(t('items.itemDeleted'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete item";
+      const message = error instanceof Error ? error.message : t('items.failedToDelete');
       toast.error(message);
     } finally {
       setDeleting(false);
@@ -139,7 +140,7 @@ export default function ItemsGallery({
           i.id === item.id ? { ...i, is_favorite: !newValue } : i
         )
       );
-      toast.error("Failed to update favorite");
+      toast.error(t('items.failedToUpdateFavorite'));
     }
   }
 
@@ -147,13 +148,13 @@ export default function ItemsGallery({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold">{title}</h2>
+        <h2 className="text-xl font-semibold">{t('items.title')}</h2>
         <Link
           href="/items/new"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
         >
           <Plus className="w-4 h-4" />
-          Add Item
+          {t('items.addItem')}
         </Link>
       </div>
 
@@ -171,7 +172,7 @@ export default function ItemsGallery({
               : "bg-secondary text-foreground hover:bg-secondary/80"
           }`}
         >
-          All
+          {t('common.all')}
         </button>
         <button
           type="button"
@@ -186,7 +187,7 @@ export default function ItemsGallery({
           }`}
         >
           <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
-          Favorites
+          {t('common.favorites')}
         </button>
         <div className="w-px h-8 bg-border mx-1" />
         {categories.map((c) => (
@@ -223,7 +224,7 @@ export default function ItemsGallery({
                   setSelectedItem(it);
                   setOpen(true);
                 }}
-                aria-label={`Open ${it.name}`}
+                aria-label={t('aria.openItem', { name: it.name })}
               >
                 {it.image_url ? (
                   <Image
@@ -235,7 +236,7 @@ export default function ItemsGallery({
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-muted-foreground">
-                    No image
+                    {t('common.noImage')}
                   </div>
                 )}
                 {it.is_favorite && (
@@ -247,11 +248,15 @@ export default function ItemsGallery({
               <div className="p-4 space-y-1">
                 <div className="font-medium">{it.name}</div>
                 <div className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-secondary text-muted-foreground">
-                  {it.category_name || "Uncategorized"}
+                  {it.category_name || t('common.uncategorized')}
                 </div>
                 {it.created_at && (
                   <div className="text-xs text-muted-foreground">
-                    Added {new Date(it.created_at).toLocaleDateString()}
+                    {t('common.added')} {format.dateTime(new Date(it.created_at), {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </div>
                 )}
               </div>
@@ -269,15 +274,15 @@ export default function ItemsGallery({
           </div>
           <p className="text-muted-foreground mb-4">
             {showFavoritesOnly
-              ? "No favorite items yet. Star some items to see them here!"
-              : "No items in this category yet."}
+              ? t('items.noFavoriteItems')
+              : t('items.noItemsCategory')}
           </p>
           {!showFavoritesOnly && (
             <Link
               href="/items/new"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:bg-secondary transition-colors"
             >
-              Add your first item
+              {t('items.addFirstItem')}
             </Link>
           )}
         </div>
@@ -306,7 +311,7 @@ export default function ItemsGallery({
                 setSelectedItem(null);
               }}
               className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
-              aria-label="Close"
+              aria-label={t('aria.closeDialog')}
             >
               <X className="w-6 h-6" />
             </button>
@@ -323,7 +328,7 @@ export default function ItemsGallery({
               />
             ) : (
               <div className="aspect-square w-full rounded-xl bg-secondary flex items-center justify-center text-muted-foreground">
-                No image
+                {t('common.noImage')}
               </div>
             )}
 
@@ -334,9 +339,13 @@ export default function ItemsGallery({
                   {selectedItem.name}
                 </h3>
                 <p className="text-sm text-white/60">
-                  {selectedItem.category_name || "Uncategorized"}
+                  {selectedItem.category_name || t('common.uncategorized')}
                   {selectedItem.created_at && (
-                    <> &bull; Added {new Date(selectedItem.created_at).toLocaleDateString()}</>
+                    <> &bull; {t('common.added')} {format.dateTime(new Date(selectedItem.created_at), {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}</>
                   )}
                 </p>
               </div>
@@ -354,8 +363,8 @@ export default function ItemsGallery({
                   }`}
                   aria-label={
                     selectedItem.is_favorite
-                      ? "Remove from favorites"
-                      : "Add to favorites"
+                      ? t('aria.removeFromFavorites')
+                      : t('aria.addToFavorites')
                   }
                 >
                   <Star
@@ -372,7 +381,7 @@ export default function ItemsGallery({
                   }}
                   disabled={deleting}
                   className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
-                  aria-label="Delete item"
+                  aria-label={t('aria.deleteItem')}
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>

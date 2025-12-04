@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { getTranslations } from 'next-intl/server';
 import ItemsGallery from '@/components/ItemsGallery';
 
 export const revalidate = 0;
@@ -41,14 +42,15 @@ async function getCategories(userId: string) {
 export default async function ItemsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const t = await getTranslations();
 
   if (!user) {
-    return <div className="text-center py-12 text-muted-foreground">Please log in to view your items.</div>;
+    return <div className="text-center py-12 text-muted-foreground">{t('auth.loginRequired', { resource: t('nav.items').toLowerCase() })}</div>;
   }
 
   const [items, categories] = await Promise.all([
     getItems(user.id).catch(() => []),
     getCategories(user.id).catch(() => []),
   ]);
-  return <ItemsGallery items={items} categories={categories} title="All Items" />;
+  return <ItemsGallery items={items} categories={categories} />;
 }

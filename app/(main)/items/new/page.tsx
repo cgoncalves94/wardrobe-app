@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import ImageUploader from '@/components/ImageUploader';
 import { toast } from '@/components/ui/sonner';
@@ -17,6 +18,7 @@ export default function NewItemPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const supabase = createClient();
   const router = useRouter();
+  const t = useTranslations();
 
   useEffect(() => {
     (async () => {
@@ -36,7 +38,7 @@ export default function NewItemPage() {
 
   async function save() {
     if (!userId) {
-      toast.error('You must be logged in to save items');
+      toast.error(t('auth.mustBeLoggedIn', { action: t('items.saveItem').toLowerCase() }));
       return;
     }
     try {
@@ -48,10 +50,10 @@ export default function NewItemPage() {
         user_id: userId,
       });
       if (error) throw error;
-      toast.success('Item saved!');
+      toast.success(t('items.itemSaved'));
       router.push('/items');
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to save item";
+      const message = err instanceof Error ? err.message : t('items.failedToSave');
       toast.error(message);
     } finally {
       setSaving(false);
@@ -69,34 +71,34 @@ export default function NewItemPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-xl font-semibold">Add Item</h1>
-          <p className="text-muted-foreground text-sm">Add a new piece to your wardrobe</p>
+          <h1 className="text-xl font-semibold">{t('items.addItem')}</h1>
+          <p className="text-muted-foreground text-sm">{t('items.addItemDescription')}</p>
         </div>
       </div>
 
       {/* Form */}
       <div className="max-w-xl p-6 rounded-xl border border-border bg-card space-y-5">
         <div className="space-y-2">
-          <label htmlFor="item-name" className="text-sm font-medium">Name</label>
+          <label htmlFor="item-name" className="text-sm font-medium">{t('items.name')}</label>
           <input
             id="item-name"
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="e.g. Blue blouse"
+            placeholder={t('items.namePlaceholder')}
             className="w-full h-11 px-4 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="item-category" className="text-sm font-medium">Category</label>
+          <label htmlFor="item-category" className="text-sm font-medium">{t('items.category')}</label>
           <select
             id="item-category"
-            aria-label="Select item category"
+            aria-label={t('aria.selectCategory')}
             className="w-full h-11 px-3 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             value={categoryId || ''}
             onChange={(e) => setCategoryId(e.target.value)}
           >
-            <option value="">(none)</option>
+            <option value="">{t('items.categoryNone')}</option>
             {categories
               .filter((c) => !!c.root)
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -107,7 +109,7 @@ export default function NewItemPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Image</label>
+          <label className="text-sm font-medium">{t('items.image')}</label>
           <ImageUploader bucket="wardrobe" onUploaded={(path, url) => setImageUrl(url)} />
         </div>
 
@@ -126,10 +128,10 @@ export default function NewItemPage() {
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Saving...
+              {t('common.saving')}
             </>
           ) : (
-            'Save Item'
+            t('items.saveItem')
           )}
         </button>
       </div>
