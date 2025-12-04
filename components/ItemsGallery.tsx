@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import { Plus, Star, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
@@ -43,6 +43,7 @@ export default function ItemsGallery({
 
   const supabase = createClient();
   const t = useTranslations();
+  const format = useFormatter();
 
   // Close with Escape
   useEffect(() => {
@@ -251,7 +252,11 @@ export default function ItemsGallery({
                 </div>
                 {it.created_at && (
                   <div className="text-xs text-muted-foreground">
-                    {t('common.added')} {new Date(it.created_at).toLocaleDateString()}
+                    {t('common.added')} {format.dateTime(new Date(it.created_at), {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </div>
                 )}
               </div>
@@ -336,7 +341,11 @@ export default function ItemsGallery({
                 <p className="text-sm text-white/60">
                   {selectedItem.category_name || t('common.uncategorized')}
                   {selectedItem.created_at && (
-                    <> &bull; {t('common.added')} {new Date(selectedItem.created_at).toLocaleDateString()}</>
+                    <> &bull; {t('common.added')} {format.dateTime(new Date(selectedItem.created_at), {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}</>
                   )}
                 </p>
               </div>

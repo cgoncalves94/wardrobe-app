@@ -174,6 +174,7 @@
     "closeDialog": "Close",
     "deleteItem": "Delete item",
     "deleteOutfit": "Delete outfit",
+    "deleteCategory": "Delete {name}",
     "addToFavorites": "Add to favorites",
     "removeFromFavorites": "Remove from favorites",
     "openItem": "Open {name}",

@@ -179,7 +179,7 @@ export default function CategoriesPage() {
                 <button
                   type="button"
                   onClick={() => attemptDelete(c)}
-                  aria-label={`${t('common.delete')} ${c.name}`}
+                  aria-label={t('aria.deleteCategory', { name: c.name })}
                   className="w-10 h-10 flex items-center justify-center rounded-lg border border-border hover:bg-secondary hover:border-destructive hover:text-destructive transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />

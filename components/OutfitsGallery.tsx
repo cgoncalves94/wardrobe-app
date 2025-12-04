@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useTranslations, useFormatter } from "next-intl";
 import { Plus, Sparkles, Star, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
@@ -36,6 +36,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
 
   const supabase = createClient();
   const t = useTranslations();
+  const format = useFormatter();
 
   // Close with Escape
   useEffect(() => {
@@ -204,7 +205,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
             <div className="p-4">
               <h3 className="font-medium truncate">{outfit.name}</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                {new Date(outfit.created_at).toLocaleDateString("en-US", {
+                {format.dateTime(new Date(outfit.created_at), {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -272,7 +273,11 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
                   {selectedOutfit.name}
                 </h3>
                 <p className="text-sm text-white/60">
-                  {new Date(selectedOutfit.created_at).toLocaleDateString()}
+                  {format.dateTime(new Date(selectedOutfit.created_at), {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
               <div className="flex items-center gap-2">
