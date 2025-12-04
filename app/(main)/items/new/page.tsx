@@ -114,7 +114,7 @@ export default function NewItemPage() {
         </div>
 
         {imageUrl && (
-          <div className="relative h-40 w-40 overflow-hidden rounded-xl border border-border">
+          <div className="relative h-32 w-32 sm:h-40 sm:w-40 overflow-hidden rounded-xl border border-border">
             <Image src={imageUrl} alt="Preview" fill className="object-cover" sizes="160px" />
           </div>
         )}

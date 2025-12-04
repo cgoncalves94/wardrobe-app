@@ -63,7 +63,7 @@ export default function ImageUploader({ bucket, onUploaded }: Props) {
     <div className="grid gap-2">
       <Label>Upload image</Label>
       <div
-        className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-all cursor-pointer
+        className={`relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 sm:p-6 transition-all cursor-pointer
           ${dragActive ? "border-foreground/50 bg-secondary" : "border-border hover:border-foreground/30"}
           ${uploaded ? "border-green-500 bg-green-50 dark:bg-green-950/20" : ""}
           ${error ? "border-red-500 bg-red-50 dark:bg-red-950/20" : ""}`}

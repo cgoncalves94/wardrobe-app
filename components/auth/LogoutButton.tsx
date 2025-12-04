@@ -5,8 +5,13 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export default function LogoutButton() {
+type Props = {
+  className?: string;
+};
+
+export default function LogoutButton({ className }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const t = useTranslations("nav");
@@ -22,7 +27,7 @@ export default function LogoutButton() {
       variant="ghost"
       size="sm"
       onClick={handleLogout}
-      className="text-muted-foreground hover:text-foreground"
+      className={cn("text-muted-foreground hover:text-foreground", className)}
     >
       <LogOut className="w-4 h-4 mr-1" />
       <span className="hidden sm:inline">{t("logout")}</span>

@@ -270,7 +270,7 @@ export default function GenerateOutfitPage() {
                 {t("outfits.noItemsInCategory")}
               </p>
             ) : (
-              <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
                 {items.map((item) => (
                   <button
                     key={item.id}
@@ -313,7 +313,7 @@ export default function GenerateOutfitPage() {
   }
 
   return (
-    <div className="pb-24 lg:pb-8">
+    <div className="pb-20 lg:pb-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link
@@ -486,7 +486,7 @@ export default function GenerateOutfitPage() {
 
                   {expandedSection === "accessories" && (
                     <div className="border-t border-border p-3 bg-secondary/30">
-                      <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
                         {accessoryItems.map((item) => {
                           const isSelected = selectedAccessories.some((a) => a.id === item.id);
                           return (
@@ -539,12 +539,12 @@ export default function GenerateOutfitPage() {
             </div>
           </div>
 
-          {/* Desktop Generate Button */}
+          {/* Generate Button */}
           <button
             type="button"
             onClick={handleGenerate}
             disabled={generating || !hasSelection}
-            className="hidden lg:flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {generating ? (
               <>
@@ -646,55 +646,33 @@ export default function GenerateOutfitPage() {
         </div>
       </div>
 
-      {/* Mobile Sticky Generate Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border lg:hidden">
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={generating || !hasSelection}
-          className="w-full h-12 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          {generating ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              {t("outfits.generating")}
-            </>
-          ) : (
-            <>
-              <Wand2 className="w-5 h-5" />
-              {selectedCount > 0 ? t("outfits.generateWithItems", { count: selectedCount }) : t("outfits.generateOutfit")}
-            </>
-          )}
-        </button>
-      </div>
-
       {/* Preview Lightbox */}
       {previewOpen && generatedImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-black/95"
           onClick={() => setPreviewOpen(false)}
           role="dialog"
           aria-modal="true"
         >
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(false)}
+            className="absolute top-4 right-4 p-3 rounded-full bg-black/60 text-white/90 hover:text-white hover:bg-black/80 transition-colors z-10"
+            aria-label={t("aria.closeDialog")}
+          >
+            <X className="w-6 h-6" />
+          </button>
           <div
-            className="relative max-h-[90vh] max-w-[90vw]"
+            className="relative w-full h-full p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(false)}
-              className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
-              aria-label={t("aria.closeDialog")}
-            >
-              <X className="w-6 h-6" />
-            </button>
             <Image
               src={generatedImage}
               alt={t("outfits.generateOutfit")}
-              width={1024}
-              height={1024}
-              className="max-h-[85vh] w-auto rounded-xl object-contain"
-              sizes="90vw"
+              fill
+              className="object-contain"
+              sizes="100vw"
+              priority
             />
           </div>
         </div>
