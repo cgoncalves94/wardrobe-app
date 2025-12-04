@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Guarda-Roupa",
-    "appStudio": "Guarda-Roupa Studio",
+    "appName": "Wardrobe",
+    "appStudio": "Wardrobe Studio",
     "loading": "Carregando...",
     "saving": "Salvando...",
     "delete": "Excluir",
@@ -39,7 +39,7 @@
     "mustBeLoggedIn": "Você precisa estar logado para {action}"
   },
   "home": {
-    "badge": "Guarda-Roupa com IA",
+    "badge": "Moda com IA",
     "title": "Estilize seu guarda-roupa",
     "titleAccent": "sem esforço",
     "description": "Catalogue suas roupas, crie combinações incríveis com IA e descubra seu estilo pessoal.",
