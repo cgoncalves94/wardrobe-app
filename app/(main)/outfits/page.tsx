@@ -1,0 +1,92 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { Sparkles, Wand2, Shirt, ArrowRight } from "lucide-react";
+import OutfitsGallery from "@/components/OutfitsGallery";
+
+export const revalidate = 0;
+
+async function getOutfits(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("outfits")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching outfits:", error);
+    return [];
+  }
+  return data || [];
+}
+
+export default async function OutfitsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <div className="text-center py-12 text-muted-foreground">Please log in to view your outfits.</div>;
+  }
+
+  const outfits = await getOutfits(user.id);
+
+  return (
+    <div className="space-y-10">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Outfits</h1>
+          <p className="text-muted-foreground mt-1">
+            Create and manage AI-generated outfit combinations
+          </p>
+        </div>
+        <Link
+          href="/outfits/generate"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
+        >
+          <Wand2 className="w-4 h-4" />
+          Create Outfit
+        </Link>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href="/outfits/generate" className="group">
+          <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-transform group-hover:scale-105">
+              <Sparkles className="w-6 h-6 text-foreground/70" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium">Outfit Generator</h3>
+              <p className="text-sm text-muted-foreground">
+                Select items and let AI style them together
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+
+        <Link href="/outfits/try-on" className="group">
+          <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-transform group-hover:scale-105">
+              <Shirt className="w-6 h-6 text-foreground/70" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium">Virtual Try-On</h3>
+              <p className="text-sm text-muted-foreground">
+                See yourself wearing any outfit
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+      </div>
+
+      {/* Saved Outfits */}
+      <div>
+        <h2 className="text-lg font-semibold mb-5">Saved Outfits</h2>
+        <OutfitsGallery outfits={outfits} />
+      </div>
+    </div>
+  );
+}
