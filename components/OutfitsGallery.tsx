@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Plus, Sparkles, Star, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
@@ -34,6 +35,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
   }, [outfits, showFavoritesOnly]);
 
   const supabase = createClient();
+  const t = useTranslations();
 
   // Close with Escape
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
   }, [open]);
 
   async function handleDelete(outfit: Outfit) {
-    if (!confirm(`Delete "${outfit.name}"?`)) return;
+    if (!confirm(t('outfits.deleteConfirm', { name: outfit.name }))) return;
 
     setDeleting(true);
     try {
@@ -78,9 +80,9 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
       setOutfits((prev) => prev.filter((o) => o.id !== outfit.id));
       setOpen(false);
       setSelectedOutfit(null);
-      toast.success("Outfit deleted");
+      toast.success(t('outfits.outfitDeleted'));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to delete outfit";
+      const message = error instanceof Error ? error.message : t('outfits.failedToDelete');
       toast.error(message);
     } finally {
       setDeleting(false);
@@ -114,7 +116,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
           o.id === outfit.id ? { ...o, is_favorite: !newValue } : o
         )
       );
-      toast.error("Failed to update favorite");
+      toast.error(t('outfits.failedToUpdateFavorite'));
     }
   }
 
@@ -124,15 +126,15 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
         <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">
           <Plus className="w-7 h-7 text-muted-foreground" />
         </div>
-        <h3 className="font-medium text-lg mb-2">No outfits yet</h3>
+        <h3 className="font-medium text-lg mb-2">{t('outfits.noOutfitsTitle')}</h3>
         <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-          Create your first AI-generated outfit and it will appear here
+          {t('outfits.noOutfitsDescription')}
         </p>
         <Link
           href="/outfits/generate"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:bg-secondary transition-colors"
         >
-          Create Your First Outfit
+          {t('outfits.createFirstOutfit')}
         </Link>
       </div>
     );
@@ -151,7 +153,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
               : "bg-secondary text-foreground hover:bg-secondary/80"
           }`}
         >
-          All
+          {t('common.all')}
         </button>
         <button
           type="button"
@@ -163,7 +165,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
           }`}
         >
           <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
-          Favorites
+          {t('common.favorites')}
         </button>
       </div>
 
@@ -218,7 +220,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
             <Star className="w-7 h-7 text-muted-foreground" />
           </div>
           <p className="text-muted-foreground">
-            No favorite outfits yet. Star some outfits to see them here!
+            {t('outfits.noFavoriteOutfits')}
           </p>
         </div>
       )}
@@ -246,7 +248,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
                 setSelectedOutfit(null);
               }}
               className="block sticky top-0 ml-auto mb-2 p-2 text-white/70 hover:text-white transition-colors z-10"
-              aria-label="Close"
+              aria-label={t('aria.closeDialog')}
             >
               <X className="w-6 h-6" />
             </button>
@@ -270,14 +272,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
                   {selectedOutfit.name}
                 </h3>
                 <p className="text-sm text-white/60">
-                  {new Date(selectedOutfit.created_at).toLocaleDateString(
-                    "en-US",
-                    {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    }
-                  )}
+                  {new Date(selectedOutfit.created_at).toLocaleDateString()}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -294,8 +289,8 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
                   }`}
                   aria-label={
                     selectedOutfit.is_favorite
-                      ? "Remove from favorites"
-                      : "Add to favorites"
+                      ? t('aria.removeFromFavorites')
+                      : t('aria.addToFavorites')
                   }
                 >
                   <Star
@@ -312,7 +307,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
                   }}
                   disabled={deleting}
                   className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
-                  aria-label="Delete outfit"
+                  aria-label={t('aria.deleteOutfit')}
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>

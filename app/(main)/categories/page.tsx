@@ -1,20 +1,26 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Trash2, Loader2, Shirt, RectangleVertical, PersonStanding, Footprints, Watch, LucideIcon } from 'lucide-react';
 import type { CategoryRow } from '@/types';
 
-const ROOT_CONFIG: { name: string; icon: LucideIcon }[] = [
-  { name: 'Top', icon: Shirt },
-  { name: 'Bottom', icon: RectangleVertical },
-  { name: 'Full Body', icon: PersonStanding },
-  { name: 'Footwear', icon: Footprints },
-  { name: 'Accessories', icon: Watch },
+// key = translation key, dbValue = value stored in database
+const ROOT_CONFIG: { key: string; dbValue: string; icon: LucideIcon }[] = [
+  { key: 'top', dbValue: 'Top', icon: Shirt },
+  { key: 'bottom', dbValue: 'Bottom', icon: RectangleVertical },
+  { key: 'fullBody', dbValue: 'Full Body', icon: PersonStanding },
+  { key: 'footwear', dbValue: 'Footwear', icon: Footprints },
+  { key: 'accessories', dbValue: 'Accessories', icon: Watch },
 ];
 
 function getRootIcon(root: string): LucideIcon {
-  return ROOT_CONFIG.find(r => r.name === root)?.icon || Shirt;
+  return ROOT_CONFIG.find(r => r.dbValue === root)?.icon || Shirt;
+}
+
+function getRootTranslationKey(root: string): string {
+  return ROOT_CONFIG.find(r => r.dbValue === root)?.key || 'top';
 }
 
 export default function CategoriesPage() {
@@ -25,6 +31,7 @@ export default function CategoriesPage() {
   const [adding, setAdding] = useState(false);
   const userIdRef = useRef<string | null>(null);
   const supabase = createClient();
+  const t = useTranslations();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,7 +54,7 @@ export default function CategoriesPage() {
   async function add() {
     if (!parentRoot || !name) return;
     if (!userIdRef.current) {
-      toast.error('You must be logged in to add categories');
+      toast.error(t('auth.mustBeLoggedIn', { action: t('categories.addCategory').toLowerCase() }));
       return;
     }
     setAdding(true);
@@ -58,7 +65,7 @@ export default function CategoriesPage() {
     });
     if (!error) {
       setName(''); setParentRoot(''); load();
-      toast.success('Category added!');
+      toast.success(t('categories.categoryAdded'));
     } else {
       toast.error(error.message);
     }
@@ -75,7 +82,7 @@ export default function CategoriesPage() {
       return;
     }
     if ((count || 0) > 0) {
-      toast.error('Cannot delete: there are items using this category.');
+      toast.error(t('categories.cannotDelete'));
       return;
     }
     const { error, data } = await supabase
@@ -88,50 +95,50 @@ export default function CategoriesPage() {
       return;
     }
     if (!data || data.length === 0) {
-      toast.error('Delete was blocked by the database. Check RLS policies.');
+      toast.error(t('categories.deleteBlocked'));
       return;
     }
     setCats((prev) => prev.filter((c) => c.id !== category.id));
-    toast.success('Category deleted!');
+    toast.success(t('categories.categoryDeleted'));
   }
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold">Categories</h1>
-        <p className="text-muted-foreground mt-1">Organize your wardrobe items</p>
+        <h1 className="text-2xl font-semibold">{t('categories.title')}</h1>
+        <p className="text-muted-foreground mt-1">{t('categories.description')}</p>
       </div>
 
       {/* Add Form */}
       <div className="p-5 rounded-xl border border-border bg-card">
-        <h2 className="text-sm font-medium mb-4">Add Category</h2>
+        <h2 className="text-sm font-medium mb-4">{t('categories.addCategory')}</h2>
         <div className="grid gap-4 sm:grid-cols-3 items-start">
           <div className="space-y-2">
-            <label htmlFor="category-name" className="text-sm font-medium">Name</label>
+            <label htmlFor="category-name" className="text-sm font-medium">{t('categories.name')}</label>
             <input
               id="category-name"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="e.g. Shirt"
+              placeholder={t('categories.namePlaceholder')}
               className="w-full h-11 px-4 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <label className="text-sm font-medium">Parent Category</label>
+            <label className="text-sm font-medium">{t('categories.parentCategory')}</label>
             <div className="flex flex-wrap gap-2">
-              {ROOT_CONFIG.map(({ name: rootName, icon: Icon }) => (
+              {ROOT_CONFIG.map(({ key, dbValue, icon: Icon }) => (
                 <button
-                  key={rootName}
+                  key={dbValue}
                   type="button"
-                  onClick={() => setParentRoot(parentRoot === rootName ? '' : rootName)}
+                  onClick={() => setParentRoot(parentRoot === dbValue ? '' : dbValue)}
                   className={`h-10 px-4 rounded-lg border flex items-center gap-2 transition-all ${
-                    parentRoot === rootName
+                    parentRoot === dbValue
                       ? 'bg-foreground text-background border-foreground'
                       : 'border-border hover:bg-secondary'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{rootName}</span>
+                  <span className="text-sm font-medium">{t(`categories.roots.${key}`)}</span>
                 </button>
               ))}
             </div>
@@ -144,19 +151,20 @@ export default function CategoriesPage() {
           className="mt-4 w-full sm:w-auto h-11 px-8 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          Add Category
+          {t('categories.addCategory')}
         </button>
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Loading...</div>
+        <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
       ) : cats.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">No categories yet. Add one above!</div>
+        <div className="text-center py-12 text-muted-foreground">{t('categories.noCategories')}</div>
       ) : (
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {cats.map((c) => {
             const RootIcon = getRootIcon(c.root);
+            const rootKey = getRootTranslationKey(c.root);
             return (
               <li key={c.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
                 <div className="flex items-center gap-3">
@@ -165,13 +173,13 @@ export default function CategoriesPage() {
                   </div>
                   <div>
                     <div className="font-medium">{c.name}</div>
-                    <div className="text-sm text-muted-foreground">{c.root}</div>
+                    <div className="text-sm text-muted-foreground">{t(`categories.roots.${rootKey}`)}</div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => attemptDelete(c)}
-                  aria-label={`Delete ${c.name}`}
+                  aria-label={`${t('common.delete')} ${c.name}`}
                   className="w-10 h-10 flex items-center justify-center rounded-lg border border-border hover:bg-secondary hover:border-destructive hover:text-destructive transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />

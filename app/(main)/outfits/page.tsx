@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getTranslations } from "next-intl/server";
 import { Sparkles, Wand2, Shirt, ArrowRight } from "lucide-react";
 import OutfitsGallery from "@/components/OutfitsGallery";
 
@@ -23,9 +24,10 @@ async function getOutfits(userId: string) {
 export default async function OutfitsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const t = await getTranslations();
 
   if (!user) {
-    return <div className="text-center py-12 text-muted-foreground">Please log in to view your outfits.</div>;
+    return <div className="text-center py-12 text-muted-foreground">{t('auth.loginRequired', { resource: t('nav.outfits').toLowerCase() })}</div>;
   }
 
   const outfits = await getOutfits(user.id);
@@ -35,9 +37,9 @@ export default async function OutfitsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Outfits</h1>
+          <h1 className="text-2xl font-semibold">{t('outfits.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Create and manage AI-generated outfit combinations
+            {t('outfits.description')}
           </p>
         </div>
         <Link
@@ -45,7 +47,7 @@ export default async function OutfitsPage() {
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
         >
           <Wand2 className="w-4 h-4" />
-          Create Outfit
+          {t('outfits.createOutfit')}
         </Link>
       </div>
 
@@ -57,9 +59,9 @@ export default async function OutfitsPage() {
               <Sparkles className="w-6 h-6 text-foreground/70" />
             </div>
             <div className="flex-1">
-              <h3 className="font-medium">Outfit Generator</h3>
+              <h3 className="font-medium">{t('outfits.outfitGenerator')}</h3>
               <p className="text-sm text-muted-foreground">
-                Select items and let AI style them together
+                {t('outfits.outfitGeneratorDescription')}
               </p>
             </div>
             <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
@@ -72,9 +74,9 @@ export default async function OutfitsPage() {
               <Shirt className="w-6 h-6 text-foreground/70" />
             </div>
             <div className="flex-1">
-              <h3 className="font-medium">Virtual Try-On</h3>
+              <h3 className="font-medium">{t('outfits.virtualTryOn')}</h3>
               <p className="text-sm text-muted-foreground">
-                See yourself wearing any outfit
+                {t('outfits.virtualTryOnDescription')}
               </p>
             </div>
             <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
@@ -84,7 +86,7 @@ export default async function OutfitsPage() {
 
       {/* Saved Outfits */}
       <div>
-        <h2 className="text-lg font-semibold mb-5">Saved Outfits</h2>
+        <h2 className="text-lg font-semibold mb-5">{t('outfits.savedOutfits')}</h2>
         <OutfitsGallery outfits={outfits} />
       </div>
     </div>

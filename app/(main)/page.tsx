@@ -1,22 +1,54 @@
 import Link from "next/link";
 import { Sparkles, Shirt, Wand2, FolderOpen, Plus, ArrowRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
-export default function Home() {
+export default async function Home() {
+  const t = await getTranslations("home");
+  const tNav = await getTranslations("nav");
+  const tCommon = await getTranslations("common");
+
+  const quickActions = [
+    {
+      href: "/outfits/generate",
+      icon: Wand2,
+      title: t("aiOutfit"),
+      description: t("aiOutfitDescription"),
+    },
+    {
+      href: "/items",
+      icon: Shirt,
+      title: t("myWardrobe"),
+      description: t("myWardrobeDescription"),
+    },
+    {
+      href: "/items/new",
+      icon: Plus,
+      title: tNav("addItem"),
+      description: t("uploadClothes"),
+    },
+    {
+      href: "/categories",
+      icon: FolderOpen,
+      title: tNav("categories"),
+      description: t("organizeItems"),
+    },
+  ];
+
   return (
     <div className="space-y-12">
       {/* Hero Section */}
       <section className="relative py-12 md:py-20">
         <div className="max-w-3xl">
           <p className="text-sm font-medium text-muted-foreground mb-4 animate-fade-up">
-            AI-Powered Wardrobe
+            {t("badge")}
           </p>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight tracking-tight mb-6 animate-fade-up delay-100">
-            Style your wardrobe
+            {t("title")}
             <br />
-            <span className="text-muted-foreground">effortlessly</span>
+            <span className="text-muted-foreground">{t("titleAccent")}</span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mb-8 animate-fade-up delay-200">
-            Catalog your clothes, create stunning outfit combinations with AI, and discover your personal style.
+            {t("description")}
           </p>
           <div className="flex flex-wrap gap-4 animate-fade-up delay-300">
             <Link
@@ -24,14 +56,14 @@ export default function Home() {
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
             >
               <Wand2 className="w-4 h-4" />
-              Create Outfit
+              {t("createOutfit")}
             </Link>
             <Link
               href="/items/new"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border hover:bg-secondary transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add Item
+              {tNav("addItem")}
             </Link>
           </div>
         </div>
@@ -49,34 +81,9 @@ export default function Home() {
 
       {/* Quick Actions */}
       <section>
-        <h2 className="text-xl font-semibold mb-6">Quick Actions</h2>
+        <h2 className="text-xl font-semibold mb-6">{t("quickActions")}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              href: "/outfits/generate",
-              icon: Wand2,
-              title: "AI Outfit",
-              description: "Create with AI",
-            },
-            {
-              href: "/items",
-              icon: Shirt,
-              title: "My Wardrobe",
-              description: "View all items",
-            },
-            {
-              href: "/items/new",
-              icon: Plus,
-              title: "Add Item",
-              description: "Upload clothes",
-            },
-            {
-              href: "/categories",
-              icon: FolderOpen,
-              title: "Categories",
-              description: "Organize items",
-            },
-          ].map((item) => (
+          {quickActions.map((item) => (
             <Link key={item.href} href={item.href} className="group">
               <div className="h-full p-6 rounded-xl border border-border bg-card hover:border-foreground/20 hover:bg-secondary/50 transition-all duration-300">
                 <div className="w-12 h-12 rounded-xl mb-4 flex items-center justify-center bg-secondary transition-transform group-hover:scale-105">
@@ -92,7 +99,7 @@ export default function Home() {
 
       {/* Features */}
       <section>
-        <h2 className="text-xl font-semibold mb-6">Features</h2>
+        <h2 className="text-xl font-semibold mb-6">{t("features")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="p-6 rounded-xl border border-border bg-card">
             <div className="flex items-start gap-4 mb-4">
@@ -100,18 +107,18 @@ export default function Home() {
                 <Sparkles className="w-5 h-5 text-foreground/70" />
               </div>
               <div>
-                <h3 className="font-medium mb-1">AI Outfit Generator</h3>
-                <p className="text-sm text-muted-foreground">Mix & match with AI</p>
+                <h3 className="font-medium mb-1">{t("aiOutfitGenerator")}</h3>
+                <p className="text-sm text-muted-foreground">{t("mixMatch")}</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Select your tops and bottoms, choose a style, and let AI create beautifully styled outfit combinations.
+              {t("aiOutfitGeneratorDescription")}
             </p>
             <Link
               href="/outfits/generate"
               className="inline-flex items-center gap-1 text-sm font-medium hover:gap-2 transition-all"
             >
-              Try it now
+              {tCommon("tryItNow")}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -122,18 +129,18 @@ export default function Home() {
                 <Shirt className="w-5 h-5 text-foreground/70" />
               </div>
               <div>
-                <h3 className="font-medium mb-1">Virtual Try-On</h3>
-                <p className="text-sm text-muted-foreground">See yourself in any outfit</p>
+                <h3 className="font-medium mb-1">{t("virtualTryOn")}</h3>
+                <p className="text-sm text-muted-foreground">{t("seeYourselfOutfit")}</p>
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Upload your photo and see how you would look wearing different outfits from your wardrobe.
+              {t("virtualTryOnDescription")}
             </p>
             <Link
               href="/outfits/try-on"
               className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground"
             >
-              Coming soon
+              {tCommon("comingSoon")}
             </Link>
           </div>
         </div>

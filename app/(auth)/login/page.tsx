@@ -2,8 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Loader2 } from "lucide-react";
+import LoginLanguageSwitcher from "@/components/LoginLanguageSwitcher";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -12,6 +14,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,24 +64,27 @@ export default function LoginPage() {
 
           <div className="space-y-6">
             <h1 className="text-5xl xl:text-6xl text-white font-medium leading-tight tracking-tight">
-              Your personal
+              {t("heroTitle")}
               <br />
-              <span className="text-neutral-400">wardrobe</span>
+              <span className="text-neutral-400">{t("heroTitleAccent")}</span>
             </h1>
             <p className="text-neutral-500 text-lg max-w-md leading-relaxed">
-              Organize your clothes. Generate outfits with AI.
-              Simplify your style.
+              {t("heroDescription")}
             </p>
           </div>
 
           <p className="text-neutral-700 text-sm">
-            Wardrobe
+            {tCommon("appName")}
           </p>
         </div>
       </div>
 
       {/* Right - Form */}
-      <div className="flex items-center justify-center p-8 bg-white dark:bg-neutral-950">
+      <div className="flex items-center justify-center p-8 bg-white dark:bg-neutral-950 relative">
+        <div className="absolute top-6 right-6">
+          <LoginLanguageSwitcher />
+        </div>
+
         <div className="w-full max-w-sm space-y-8 animate-fade-up">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-2.5 mb-12">
@@ -86,20 +93,20 @@ export default function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
               </svg>
             </div>
-            <span className="text-lg font-medium">Wardrobe</span>
+            <span className="text-lg font-medium">{tCommon("appName")}</span>
           </div>
 
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
+            <h2 className="text-2xl font-semibold tracking-tight">{t("welcomeBack")}</h2>
             <p className="text-muted-foreground">
-              Sign in to access your wardrobe
+              {t("signInDescription")}
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-medium">
-                Email
+                {t("email")}
               </label>
               <input
                 id="email"
@@ -109,13 +116,13 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 className="w-full h-11 px-4 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-shadow"
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
               />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="password" className="text-sm font-medium">
-                Password
+                {t("password")}
               </label>
               <input
                 id="password"
@@ -125,7 +132,7 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
                 className="w-full h-11 px-4 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-shadow"
-                placeholder="Enter your password"
+                placeholder={t("passwordPlaceholder")}
               />
             </div>
 
@@ -143,11 +150,11 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing in...
+                  {t("signingIn")}
                 </>
               ) : (
                 <>
-                  Continue
+                  {t("continue")}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -155,7 +162,7 @@ export default function LoginPage() {
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
-            Personal wardrobe management
+            {t("personalWardrobe")}
           </p>
         </div>
       </div>

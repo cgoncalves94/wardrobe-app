@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -60,6 +61,7 @@ export default function GenerateOutfitPage() {
 
   const supabase = createClient();
   const router = useRouter();
+  const t = useTranslations();
 
   // Close lightbox with Escape
   useEffect(() => {
@@ -113,7 +115,7 @@ export default function GenerateOutfitPage() {
 
   async function handleGenerate() {
     if (!hasSelection) {
-      toast.error("Please select at least one item");
+      toast.error(t("outfits.selectAtLeastOne"));
       return;
     }
 
@@ -139,13 +141,13 @@ export default function GenerateOutfitPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate outfit");
+        throw new Error(data.error || t("outfits.failedToGenerate"));
       }
 
       setGeneratedImage(data.imageUrl);
-      toast.success("Outfit generated!");
+      toast.success(t("outfits.outfitGenerated"));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to generate outfit";
+      const message = error instanceof Error ? error.message : t("outfits.failedToGenerate");
       toast.error(message);
     } finally {
       setGenerating(false);
@@ -154,12 +156,12 @@ export default function GenerateOutfitPage() {
 
   async function handleSave() {
     if (!generatedImage || !outfitName.trim()) {
-      toast.error("Please enter a name for the outfit");
+      toast.error(t("outfits.enterOutfitName"));
       return;
     }
 
     if (!userId) {
-      toast.error("You must be logged in to save outfits");
+      toast.error(t("outfits.mustBeLoggedInSave"));
       return;
     }
 
@@ -175,10 +177,10 @@ export default function GenerateOutfitPage() {
 
       if (error) throw error;
 
-      toast.success("Outfit saved!");
+      toast.success(t("outfits.outfitSaved"));
       router.push("/outfits");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to save outfit";
+      const message = error instanceof Error ? error.message : t("outfits.failedToSave");
       toast.error(message);
     } finally {
       setSaving(false);
@@ -229,7 +231,7 @@ export default function GenerateOutfitPage() {
               type="button"
               onClick={() => onSelect(null)}
               className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear selection"
+              aria-label={t("aria.clearSelection")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -251,7 +253,7 @@ export default function GenerateOutfitPage() {
           </div>
           <div className="flex-1 text-left">
             <div className="text-sm font-medium">{title}</div>
-            <div className="text-xs text-muted-foreground">{items.length} items available</div>
+            <div className="text-xs text-muted-foreground">{t("outfits.itemsAvailable", { count: items.length })}</div>
           </div>
           <ChevronDown
             className={`w-4 h-4 text-muted-foreground transition-transform ${
@@ -265,7 +267,7 @@ export default function GenerateOutfitPage() {
           <div className="border-t border-border p-3 bg-secondary/30">
             {items.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground py-4">
-                No items in this category
+                {t("outfits.noItemsInCategory")}
               </p>
             ) : (
               <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
@@ -277,7 +279,7 @@ export default function GenerateOutfitPage() {
                       onSelect(item);
                       setExpandedSection(null);
                     }}
-                    aria-label={`Select ${item.name}`}
+                    aria-label={t("aria.selectItem", { name: item.name })}
                     className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-foreground/30 transition-all hover:scale-105"
                   >
                     <Image
@@ -304,7 +306,7 @@ export default function GenerateOutfitPage() {
           <div className="w-14 h-14 mx-auto rounded-xl bg-secondary flex items-center justify-center">
             <Sparkles className="w-7 h-7 text-foreground/70 animate-pulse" />
           </div>
-          <p className="text-muted-foreground">Loading your wardrobe...</p>
+          <p className="text-muted-foreground">{t("outfits.loadingWardrobe")}</p>
         </div>
       </div>
     );
@@ -321,9 +323,9 @@ export default function GenerateOutfitPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-xl font-semibold">Create Outfit</h1>
+          <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
           <p className="text-muted-foreground text-sm">
-            Select items and let AI style them together
+            {t("outfits.selectItemsDescription")}
           </p>
         </div>
       </div>
@@ -335,22 +337,34 @@ export default function GenerateOutfitPage() {
           <div className="p-4 rounded-xl border border-border bg-card">
             <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-muted-foreground" />
-              Style
+              {t("outfits.style")}
             </h3>
             <div className="flex flex-wrap gap-1.5">
-              {OUTFIT_STYLES.map((s) => (
-                <button
-                  key={s.value}
-                  onClick={() => setStyle(s.value)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    style === s.value
-                      ? "bg-foreground text-background"
-                      : "bg-secondary text-foreground hover:bg-secondary/80"
-                  }`}
-                >
-                  {s.emoji} {s.label}
-                </button>
-              ))}
+              {OUTFIT_STYLES.map((s) => {
+                const styleLabels: Record<string, string> = {
+                  casual: t("outfits.styles.casual"),
+                  formal: t("outfits.styles.formal"),
+                  "date-night": t("outfits.styles.dateNight"),
+                  work: t("outfits.styles.work"),
+                  street: t("outfits.styles.street"),
+                  cozy: t("outfits.styles.cozy"),
+                  elegant: t("outfits.styles.elegant"),
+                };
+                return (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => setStyle(s.value)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      style === s.value
+                        ? "bg-foreground text-background"
+                        : "bg-secondary text-foreground hover:bg-secondary/80"
+                    }`}
+                  >
+                    {s.emoji} {styleLabels[s.value]}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Mannequin Option */}
@@ -362,25 +376,31 @@ export default function GenerateOutfitPage() {
                   onChange={(e) => setUseMannequin(e.target.checked)}
                   className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
                 />
-                <span className="text-sm">Display on mannequin</span>
+                <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
               </label>
 
               {useMannequin && (
                 <div className="mt-3 flex gap-1.5">
-                  {MANNEQUIN_GENDERS.map((g) => (
-                    <button
-                      key={g.value}
-                      type="button"
-                      onClick={() => setMannequinGender(g.value)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                        mannequinGender === g.value
-                          ? "bg-foreground text-background"
-                          : "bg-secondary text-foreground hover:bg-secondary/80"
-                      }`}
-                    >
-                      {g.emoji} {g.label}
-                    </button>
-                  ))}
+                  {MANNEQUIN_GENDERS.map((g) => {
+                    const genderLabels: Record<string, string> = {
+                      female: t("outfits.genders.female"),
+                      male: t("outfits.genders.male"),
+                    };
+                    return (
+                      <button
+                        key={g.value}
+                        type="button"
+                        onClick={() => setMannequinGender(g.value)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                          mannequinGender === g.value
+                            ? "bg-foreground text-background"
+                            : "bg-secondary text-foreground hover:bg-secondary/80"
+                        }`}
+                      >
+                        {g.emoji} {genderLabels[g.value]}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -389,10 +409,10 @@ export default function GenerateOutfitPage() {
           {/* Item Selectors - Accordion style */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <h3 className="text-sm font-medium p-4 pb-3 border-b border-border">
-              Select Items
+              {t("outfits.selectItems")}
               {selectedCount > 0 && (
                 <span className="ml-2 px-2 py-0.5 rounded-full bg-foreground text-background text-xs">
-                  {selectedCount} selected
+                  {t("outfits.selected", { count: selectedCount })}
                 </span>
               )}
             </h3>
@@ -400,7 +420,7 @@ export default function GenerateOutfitPage() {
             <div className="p-3 space-y-2">
               <ItemSection
                 id="top"
-                title="Top"
+                title={t("categories.roots.top")}
                 items={topItems}
                 selected={selectedTop}
                 onSelect={setSelectedTop}
@@ -409,7 +429,7 @@ export default function GenerateOutfitPage() {
 
               <ItemSection
                 id="bottom"
-                title="Bottom"
+                title={t("categories.roots.bottom")}
                 items={bottomItems}
                 selected={selectedBottom}
                 onSelect={setSelectedBottom}
@@ -419,7 +439,7 @@ export default function GenerateOutfitPage() {
               {fullBodyItems.length > 0 && (
                 <ItemSection
                   id="fullbody"
-                  title="Full Body"
+                  title={t("categories.roots.fullBody")}
                   items={fullBodyItems}
                   selected={selectedFullBody}
                   onSelect={setSelectedFullBody}
@@ -430,7 +450,7 @@ export default function GenerateOutfitPage() {
               {footwearItems.length > 0 && (
                 <ItemSection
                   id="footwear"
-                  title="Footwear"
+                  title={t("categories.roots.footwear")}
                   items={footwearItems}
                   selected={selectedFootwear}
                   onSelect={setSelectedFootwear}
@@ -450,11 +470,11 @@ export default function GenerateOutfitPage() {
                       <Watch className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">Accessories</div>
+                      <div className="text-sm font-medium">{t("categories.roots.accessories")}</div>
                       <div className="text-xs text-muted-foreground">
                         {selectedAccessories.length > 0
-                          ? `${selectedAccessories.length} selected`
-                          : `${accessoryItems.length} items available`}
+                          ? t("outfits.selected", { count: selectedAccessories.length })
+                          : t("outfits.itemsAvailable", { count: accessoryItems.length })}
                       </div>
                     </div>
                     <ChevronDown
@@ -480,7 +500,7 @@ export default function GenerateOutfitPage() {
                                   setSelectedAccessories((prev) => [...prev, item]);
                                 }
                               }}
-                              aria-label={`${isSelected ? "Deselect" : "Select"} ${item.name}`}
+                              aria-label={isSelected ? t("aria.deselectItem", { name: item.name }) : t("aria.selectItem", { name: item.name })}
                               className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
                                 isSelected
                                   ? "border-foreground ring-2 ring-foreground/20"
@@ -509,7 +529,7 @@ export default function GenerateOutfitPage() {
                           onClick={() => setSelectedAccessories([])}
                           className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          Clear all accessories
+                          {t("outfits.clearAllAccessories")}
                         </button>
                       )}
                     </div>
@@ -529,12 +549,12 @@ export default function GenerateOutfitPage() {
             {generating ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Generating...
+                {t("outfits.generating")}
               </>
             ) : (
               <>
                 <Wand2 className="w-5 h-5" />
-                Generate Outfit
+                {t("outfits.generateOutfit")}
               </>
             )}
           </button>
@@ -545,7 +565,7 @@ export default function GenerateOutfitPage() {
           <div className="h-full p-4 rounded-xl border border-border bg-card flex flex-col">
             <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-muted-foreground" />
-              Preview
+              {t("outfits.preview")}
             </h3>
 
             <div className="flex-1 relative rounded-xl overflow-hidden bg-secondary min-h-[300px]">
@@ -553,9 +573,9 @@ export default function GenerateOutfitPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                   <Sparkles className="w-8 h-8 text-foreground/70 animate-pulse" />
                   <div className="text-center">
-                    <p className="text-sm font-medium">Creating outfit...</p>
+                    <p className="text-sm font-medium">{t("outfits.creatingOutfit")}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      10-20 seconds
+                      {t("outfits.generationTime")}
                     </p>
                   </div>
                 </div>
@@ -564,11 +584,11 @@ export default function GenerateOutfitPage() {
                   type="button"
                   onClick={() => setPreviewOpen(true)}
                   className="absolute inset-0 cursor-zoom-in"
-                  aria-label="Expand preview"
+                  aria-label={t("aria.expandPreview")}
                 >
                   <Image
                     src={generatedImage}
-                    alt="Generated outfit"
+                    alt={t("outfits.generateOutfit")}
                     fill
                     className="object-cover"
                     sizes="(max-width: 1024px) 100vw, 40vw"
@@ -579,8 +599,8 @@ export default function GenerateOutfitPage() {
                   <Wand2 className="w-8 h-8" />
                   <p className="text-center text-sm">
                     {hasSelection
-                      ? "Click Generate to create your outfit"
-                      : "Select items to get started"}
+                      ? t("outfits.clickGenerate")
+                      : t("outfits.selectItemsToStart")}
                   </p>
                 </div>
               )}
@@ -591,7 +611,7 @@ export default function GenerateOutfitPage() {
               <div className="mt-4 space-y-3">
                 <input
                   type="text"
-                  placeholder="Name this outfit..."
+                  placeholder={t("outfits.nameOutfitPlaceholder")}
                   value={outfitName}
                   onChange={(e) => setOutfitName(e.target.value)}
                   className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
@@ -608,13 +628,13 @@ export default function GenerateOutfitPage() {
                     ) : (
                       <Save className="w-4 h-4" />
                     )}
-                    Save
+                    {t("outfits.save")}
                   </button>
                   <button
                     type="button"
                     onClick={handleGenerate}
                     disabled={generating}
-                    aria-label="Regenerate outfit"
+                    aria-label={t("aria.regenerateOutfit")}
                     className="w-10 h-10 flex items-center justify-center rounded-lg border border-border hover:bg-secondary transition-colors disabled:opacity-50"
                   >
                     <RefreshCw className="w-4 h-4" />
@@ -637,12 +657,12 @@ export default function GenerateOutfitPage() {
           {generating ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Generating...
+              {t("outfits.generating")}
             </>
           ) : (
             <>
               <Wand2 className="w-5 h-5" />
-              Generate Outfit {selectedCount > 0 && `(${selectedCount} items)`}
+              {selectedCount > 0 ? t("outfits.generateWithItems", { count: selectedCount }) : t("outfits.generateOutfit")}
             </>
           )}
         </button>
@@ -664,13 +684,13 @@ export default function GenerateOutfitPage() {
               type="button"
               onClick={() => setPreviewOpen(false)}
               className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
-              aria-label="Close"
+              aria-label={t("aria.closeDialog")}
             >
               <X className="w-6 h-6" />
             </button>
             <Image
               src={generatedImage}
-              alt="Generated outfit"
+              alt={t("outfits.generateOutfit")}
               width={1024}
               height={1024}
               className="max-h-[85vh] w-auto rounded-xl object-contain"
