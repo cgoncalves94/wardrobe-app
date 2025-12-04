@@ -20,7 +20,10 @@
     "outfits": "Outfits",
     "categories": "Categories",
     "addItem": "Add Item",
-    "logout": "Logout"
+    "add": "Add",
+    "logout": "Logout",
+    "menu": "Menu",
+    "settings": "Settings"
   },
   "auth": {
     "welcomeBack": "Welcome back",
@@ -66,7 +69,7 @@
     "name": "Name",
     "namePlaceholder": "e.g. Blue blouse",
     "category": "Category",
-    "categoryNone": "(none)",
+    "categoryPlaceholder": "Select a category",
     "image": "Image",
     "saveItem": "Save Item",
     "itemSaved": "Item saved!",
@@ -172,6 +175,8 @@
   },
   "aria": {
     "closeDialog": "Close",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
     "deleteItem": "Delete item",
     "deleteOutfit": "Delete outfit",
     "deleteCategory": "Delete {name}",

@@ -310,7 +310,7 @@ export default function ItemsGallery({
                 setOpen(false);
                 setSelectedItem(null);
               }}
-              className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
+              className="absolute top-2 right-2 sm:-top-12 sm:right-0 p-3 rounded-full bg-black/40 sm:bg-transparent text-white/80 hover:text-white hover:bg-black/60 sm:hover:bg-transparent transition-colors z-10"
               aria-label={t('aria.closeDialog')}
             >
               <X className="w-6 h-6" />

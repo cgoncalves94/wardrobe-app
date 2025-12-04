@@ -20,7 +20,10 @@
     "outfits": "Looks",
     "categories": "Categorias",
     "addItem": "Adicionar Peça",
-    "logout": "Sair"
+    "add": "Adicionar",
+    "logout": "Sair",
+    "menu": "Menu",
+    "settings": "Configurações"
   },
   "auth": {
     "welcomeBack": "Bem-vindo de volta",
@@ -66,7 +69,7 @@
     "name": "Nome",
     "namePlaceholder": "ex. Blusa azul",
     "category": "Categoria",
-    "categoryNone": "(nenhuma)",
+    "categoryPlaceholder": "Selecione uma categoria",
     "image": "Imagem",
     "saveItem": "Salvar Peça",
     "itemSaved": "Peça salva!",
@@ -172,6 +175,8 @@
   },
   "aria": {
     "closeDialog": "Fechar",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
     "deleteItem": "Excluir peça",
     "deleteOutfit": "Excluir look",
     "deleteCategory": "Excluir {name}",

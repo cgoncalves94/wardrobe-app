@@ -248,7 +248,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
                 setOpen(false);
                 setSelectedOutfit(null);
               }}
-              className="block sticky top-0 ml-auto mb-2 p-2 text-white/70 hover:text-white transition-colors z-10"
+              className="block sticky top-0 ml-auto mb-2 p-3 rounded-full bg-black/40 text-white/80 hover:text-white hover:bg-black/60 transition-colors z-10"
               aria-label={t('aria.closeDialog')}
             >
               <X className="w-6 h-6" />
