@@ -3,57 +3,104 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/ui/sonner';
-import { Trash2, Loader2 } from 'lucide-react';
-import { ROOT_CONFIG, getRootIcon, getRootTranslationKey } from '@/lib/categories';
+import { Trash2, Loader2, Plus, ChevronDown } from 'lucide-react';
+import { ROOT_CONFIG, getRootIcon } from '@/lib/categories';
 import type { CategoryRow } from '@/types';
 
 export default function CategoriesPage() {
   const [cats, setCats] = useState<CategoryRow[]>([]);
-  const [name, setName] = useState('');
-  const [parentRoot, setParentRoot] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [newName, setNewName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const userIdRef = useRef<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   const t = useTranslations();
 
   const load = useCallback(async () => {
     setLoading(true);
-    // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     userIdRef.current = user?.id || null;
 
-    // Load categories for current user only
     const { data } = await supabase
       .from('categories')
       .select('id,name,root')
       .eq('user_id', user?.id)
       .order('name');
     setCats(data || []);
+
+    // Auto-expand sections that have categories
+    if (data && data.length > 0) {
+      const rootsWithCategories = new Set(data.map(c => c.root));
+      setExpandedSections(rootsWithCategories);
+    }
     setLoading(false);
   }, [supabase]);
 
   useEffect(() => { load(); }, [load]);
 
-  async function add() {
-    if (!parentRoot || !name) return;
+  // Focus input when adding mode is activated
+  useEffect(() => {
+    if (addingTo && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [addingTo]);
+
+  // Group categories by root
+  const categoriesByRoot = ROOT_CONFIG.reduce((acc, { dbValue }) => {
+    acc[dbValue] = cats.filter(c => c.root === dbValue);
+    return acc;
+  }, {} as Record<string, CategoryRow[]>);
+
+  function toggleSection(root: string) {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(root)) {
+        next.delete(root);
+      } else {
+        next.add(root);
+      }
+      return next;
+    });
+  }
+
+  function startAdding(root: string) {
+    setAddingTo(root);
+    setNewName('');
+    // Ensure section is expanded
+    setExpandedSections(prev => new Set(prev).add(root));
+  }
+
+  function cancelAdding() {
+    setAddingTo(null);
+    setNewName('');
+  }
+
+  async function submitAdd(root: string) {
+    if (!newName.trim()) return;
     if (!userIdRef.current) {
       toast.error(t('auth.mustBeLoggedIn', { action: t('categories.addCategory').toLowerCase() }));
       return;
     }
-    setAdding(true);
+
+    setSubmitting(true);
     const { error } = await supabase.from('categories').insert({
-      name,
-      root: parentRoot,
+      name: newName.trim(),
+      root,
       user_id: userIdRef.current,
     });
+
     if (!error) {
-      setName(''); setParentRoot(''); load();
       toast.success(t('categories.categoryAdded'));
+      setNewName('');
+      setAddingTo(null);
+      load();
     } else {
       toast.error(error.message);
     }
-    setAdding(false);
+    setSubmitting(false);
   }
 
   async function attemptDelete(category: CategoryRow) {
@@ -61,6 +108,7 @@ export default function CategoriesPage() {
       .from('items')
       .select('id', { count: 'exact', head: true })
       .eq('category_id', category.id);
+
     if (countError) {
       toast.error(countError.message);
       return;
@@ -69,11 +117,13 @@ export default function CategoriesPage() {
       toast.error(t('categories.cannotDelete'));
       return;
     }
+
     const { error, data } = await supabase
       .from('categories')
       .delete()
       .eq('id', category.id)
       .select('id');
+
     if (error) {
       toast.error(error.message);
       return;
@@ -82,97 +132,160 @@ export default function CategoriesPage() {
       toast.error(t('categories.deleteBlocked'));
       return;
     }
-    setCats((prev) => prev.filter((c) => c.id !== category.id));
+
+    setCats(prev => prev.filter(c => c.id !== category.id));
     toast.success(t('categories.categoryDeleted'));
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-semibold">{t('categories.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('categories.description')}</p>
+        </div>
+        <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold">{t('categories.title')}</h1>
         <p className="text-muted-foreground mt-1">{t('categories.description')}</p>
       </div>
 
-      {/* Add Form */}
-      <div className="p-5 rounded-xl border border-border bg-card">
-        <h2 className="text-sm font-medium mb-4">{t('categories.addCategory')}</h2>
-        <div className="grid gap-4 sm:grid-cols-3 items-start">
-          <div className="space-y-2">
-            <label htmlFor="category-name" className="text-sm font-medium">{t('categories.name')}</label>
-            <input
-              id="category-name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder={t('categories.namePlaceholder')}
-              className="w-full h-11 px-4 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <label className="text-sm font-medium">{t('categories.parentCategory')}</label>
-            <div className="flex flex-wrap gap-2">
-              {ROOT_CONFIG.map(({ key, dbValue, icon: Icon }) => (
-                <button
-                  key={dbValue}
-                  type="button"
-                  onClick={() => setParentRoot(parentRoot === dbValue ? '' : dbValue)}
-                  className={`h-10 px-4 rounded-lg border flex items-center gap-2 transition-all ${
-                    parentRoot === dbValue
-                      ? 'bg-foreground text-background border-foreground'
-                      : 'border-border hover:bg-secondary'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{t(`categories.roots.${key}`)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={add}
-          disabled={!name || !parentRoot || adding}
-          className="mt-4 w-full sm:w-auto h-11 px-8 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {t('categories.addCategory')}
-        </button>
-      </div>
+      {/* Root Category Sections */}
+      <div className="space-y-3">
+        {ROOT_CONFIG.map(({ key, dbValue, icon: Icon }) => {
+          const sectionCategories = categoriesByRoot[dbValue] || [];
+          const isExpanded = expandedSections.has(dbValue);
+          const isAdding = addingTo === dbValue;
+          const count = sectionCategories.length;
 
-      {/* List */}
-      {loading ? (
-        <div className="text-center py-12 text-muted-foreground">{t('common.loading')}</div>
-      ) : cats.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">{t('categories.noCategories')}</div>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {cats.map((c) => {
-            const RootIcon = getRootIcon(c.root);
-            const rootKey = getRootTranslationKey(c.root);
-            return (
-              <li key={c.id} className="flex items-center justify-between p-4 rounded-xl border border-border bg-card">
+          return (
+            <div
+              key={dbValue}
+              className="rounded-xl border border-border bg-card overflow-hidden"
+            >
+              {/* Section Header */}
+              <button
+                type="button"
+                onClick={() => toggleSection(dbValue)}
+                className="w-full flex items-center justify-between p-4 hover:bg-secondary/50 transition-colors"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                    <RootIcon className="w-5 h-5 text-muted-foreground" />
+                    <Icon className="w-5 h-5 text-foreground" />
                   </div>
-                  <div>
-                    <div className="font-medium">{c.name}</div>
-                    <div className="text-sm text-muted-foreground">{t(`categories.roots.${rootKey}`)}</div>
+                  <div className="text-left">
+                    <div className="font-medium">{t(`categories.roots.${key}`)}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {count === 0
+                        ? t('categories.noSubcategories')
+                        : t('categories.subcategoryCount', { count })}
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => attemptDelete(c)}
-                  aria-label={t('aria.deleteCategory', { name: c.name })}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg border border-border hover:bg-secondary hover:border-destructive hover:text-destructive transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                <div className="flex items-center gap-2">
+                  {count > 0 && (
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-secondary">
+                      {count}
+                    </span>
+                  )}
+                  <ChevronDown
+                    className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${
+                      isExpanded ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {/* Section Content */}
+              <div
+                className={`transition-all duration-200 ease-out ${
+                  isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+                }`}
+              >
+                <div className="border-t border-border">
+                  {/* Category List */}
+                  {sectionCategories.length > 0 && (
+                    <ul className="divide-y divide-border">
+                      {sectionCategories.map((category) => (
+                        <li
+                          key={category.id}
+                          className="flex items-center justify-between px-4 py-3 hover:bg-secondary/30 transition-colors"
+                        >
+                          <span className="font-medium">{category.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => attemptDelete(category)}
+                            aria-label={t('aria.deleteCategory', { name: category.name })}
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Inline Add Form */}
+                  {isAdding ? (
+                    <div className="p-4 bg-secondary/30 space-y-3">
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') submitAdd(dbValue);
+                          if (e.key === 'Escape') cancelAdding();
+                        }}
+                        placeholder={t('categories.namePlaceholder')}
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        disabled={submitting}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => submitAdd(dbValue)}
+                          disabled={!newName.trim() || submitting}
+                          className="flex-1 h-10 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                        >
+                          {submitting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            t('nav.add')
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelAdding}
+                          className="h-10 px-4 rounded-lg border border-border hover:bg-secondary transition-colors"
+                        >
+                          {t('common.close')}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startAdding(dbValue)}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span className="text-sm">{t('categories.addTo', { root: t(`categories.roots.${key}`) })}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
