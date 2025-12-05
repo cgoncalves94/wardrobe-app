@@ -14,7 +14,9 @@
     "uncategorized": "Sem categoria",
     "added": "Adicionado",
     "backToHome": "Voltar ao Início",
-    "clearFilter": "Limpar filtro"
+    "clearFilter": "Limpar filtro",
+    "showFavorites": "Mostrar apenas favoritos",
+    "showingFavorites": "Mostrando favoritos (clique para ver todos)"
   },
   "nav": {
     "home": "Início",
@@ -227,7 +229,9 @@
     "expandPreview": "Expandir pré-visualização",
     "regenerateOutfit": "Regenerar look",
     "selectItem": "Selecionar {name}",
-    "deselectItem": "Desselecionar {name}"
+    "deselectItem": "Desselecionar {name}",
+    "showAll": "Mostrar todos",
+    "showFavorites": "Mostrar apenas favoritos"
   },
   "pro": {
     "badge": "PRO",

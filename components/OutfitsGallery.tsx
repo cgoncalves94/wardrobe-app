@@ -169,25 +169,26 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
 
   return (
     <div className="space-y-5">
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-secondary rounded-lg w-fit">
+      {/* Unified filter bar: Tabs + Favorites toggle */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Tabs */}
         <button
           type="button"
           onClick={() => {
             setActiveTab("outfits");
             setShowFavoritesOnly(false);
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === "outfits"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-foreground text-background"
+              : "bg-secondary text-foreground hover:bg-secondary/80"
           }`}
         >
           <Wand2 className="w-4 h-4" />
           {t('outfits.tabOutfits')}
           {outfits.length > 0 && (
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              activeTab === "outfits" ? "bg-secondary" : "bg-background/50"
+              activeTab === "outfits" ? "bg-background/20" : "bg-foreground/10"
             }`}>
               {outfits.length}
             </span>
@@ -199,52 +200,43 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
             setActiveTab("tryons");
             setShowFavoritesOnly(false);
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === "tryons"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-foreground text-background"
+              : "bg-secondary text-foreground hover:bg-secondary/80"
           }`}
         >
           <Shirt className="w-4 h-4" />
           {t('outfits.tabTryOns')}
           {tryons.length > 0 && (
             <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-              activeTab === "tryons" ? "bg-secondary" : "bg-background/50"
+              activeTab === "tryons" ? "bg-background/20" : "bg-foreground/10"
             }`}>
               {tryons.length}
             </span>
           )}
         </button>
-      </div>
 
-      {/* Filter chips */}
-      {activeList.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setShowFavoritesOnly(false)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              !showFavoritesOnly
-                ? "bg-foreground text-background"
-                : "bg-secondary text-foreground hover:bg-secondary/80"
-            }`}
-          >
-            {t('common.all')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowFavoritesOnly(true)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
-              showFavoritesOnly
-                ? "bg-foreground text-background"
-                : "bg-secondary text-foreground hover:bg-secondary/80"
-            }`}
-          >
-            <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
-            {t('common.favorites')}
-          </button>
-        </div>
-      )}
+        {/* Favorites toggle */}
+        {activeList.length > 0 && (
+          <>
+            <div className="w-px h-6 bg-border mx-1" />
+            <button
+              type="button"
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`p-2 rounded-lg transition-all ${
+                showFavoritesOnly
+                  ? "bg-foreground text-background"
+                  : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+              }`}
+              aria-label={showFavoritesOnly ? t('aria.showAll') : t('aria.showFavorites')}
+              title={showFavoritesOnly ? t('common.showingFavorites') : t('common.showFavorites')}
+            >
+              <Star className={`w-4 h-4 ${showFavoritesOnly ? "fill-current" : ""}`} />
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Content */}
       {activeList.length === 0 ? (

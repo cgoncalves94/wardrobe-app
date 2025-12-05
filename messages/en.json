@@ -14,7 +14,9 @@
     "uncategorized": "Uncategorized",
     "added": "Added",
     "backToHome": "Back to Home",
-    "clearFilter": "Clear filter"
+    "clearFilter": "Clear filter",
+    "showFavorites": "Show favorites only",
+    "showingFavorites": "Showing favorites (click to show all)"
   },
   "nav": {
     "home": "Home",
@@ -227,7 +229,9 @@
     "expandPreview": "Expand preview",
     "regenerateOutfit": "Regenerate outfit",
     "selectItem": "Select {name}",
-    "deselectItem": "Deselect {name}"
+    "deselectItem": "Deselect {name}",
+    "showAll": "Show all items",
+    "showFavorites": "Show favorites only"
   },
   "pro": {
     "badge": "PRO",

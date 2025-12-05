@@ -171,7 +171,7 @@ export default function ItemsGallery({
         </div>
       </div>
 
-      {/* Filter chips */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -187,26 +187,26 @@ export default function ItemsGallery({
         >
           {t('common.all')}
         </button>
+
+        {/* Favorites toggle */}
         <button
           type="button"
-          onClick={() => {
-            setShowFavoritesOnly(!showFavoritesOnly);
-            if (!showFavoritesOnly) setCategory(null);
-          }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
+          onClick={() => setShowFavoritesOnly((prev) => !prev)}
+          className={`p-2 rounded-lg transition-all ${
             showFavoritesOnly
               ? "bg-foreground text-background"
-              : "bg-secondary text-foreground hover:bg-secondary/80"
+              : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
           }`}
+          aria-label={showFavoritesOnly ? t('aria.showAll') : t('aria.showFavorites')}
+          title={showFavoritesOnly ? t('common.showingFavorites') : t('common.showFavorites')}
         >
-          <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
-          {t('common.favorites')}
+          <Star className={`w-4 h-4 ${showFavoritesOnly ? "fill-current" : ""}`} />
         </button>
 
         {/* Category dropdown */}
         {categories.length > 0 && (
           <>
-            <div className="w-px h-8 bg-border mx-1" />
+            <div className="w-px h-6 bg-border mx-1" />
             <CategoryDropdown
               categories={categories}
               selectedId={showFavoritesOnly ? null : selectedCategoryId}
