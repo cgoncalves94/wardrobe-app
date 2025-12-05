@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
-import { Sparkles, Wand2, Shirt, ArrowRight, Lock } from "lucide-react";
+import { Sparkles, Wand2, Shirt, ArrowRight } from "lucide-react";
 import OutfitsGallery from "@/components/OutfitsGallery";
 import { getUserSubscription } from "@/lib/supabase/subscription";
 import { isProRoute } from "@/lib/features";
+import ProBadge from "@/components/ProBadge";
 
 export const revalidate = 0;
 
@@ -59,10 +60,7 @@ export default async function OutfitsPage() {
         <Link href="/outfits/generate" className="group">
           <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4 relative">
             {isProRoute("/outfits/generate") && !subscription?.isPro && (
-              <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground text-background text-xs font-medium">
-                <Lock className="w-3 h-3" />
-                {t('pro.badge')}
-              </div>
+              <ProBadge label={t('pro.badge')} />
             )}
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-transform group-hover:scale-105">
               <Sparkles className="w-6 h-6 text-foreground/70" />
@@ -80,10 +78,7 @@ export default async function OutfitsPage() {
         <Link href="/outfits/try-on" className="group">
           <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4 relative">
             {isProRoute("/outfits/try-on") && !subscription?.isPro && (
-              <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground text-background text-xs font-medium">
-                <Lock className="w-3 h-3" />
-                {t('pro.badge')}
-              </div>
+              <ProBadge label={t('pro.badge')} />
             )}
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-transform group-hover:scale-105">
               <Shirt className="w-6 h-6 text-foreground/70" />

@@ -316,26 +316,29 @@ export default function GenerateOutfitPage() {
     );
   }
 
+  // Header component to avoid duplication
+  const header = (
+    <div className="flex items-center gap-4 mb-6">
+      <Link
+        href="/outfits"
+        className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </Link>
+      <div>
+        <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
+        <p className="text-muted-foreground text-sm">
+          {t("outfits.selectItemsDescription")}
+        </p>
+      </div>
+    </div>
+  );
+
   // Gate: Show locked state for free users (only if feature is Pro-gated)
   if (isProRoute("/outfits/generate") && !isPro) {
     return (
       <div className="pb-20 lg:pb-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Link
-            href="/outfits"
-            className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
-            <p className="text-muted-foreground text-sm">
-              {t("outfits.selectItemsDescription")}
-            </p>
-          </div>
-        </div>
-
+        {header}
         <ProFeatureGate featureKey="generate" />
       </div>
     );
@@ -343,21 +346,7 @@ export default function GenerateOutfitPage() {
 
   return (
     <div className="pb-20 lg:pb-8">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link
-          href="/outfits"
-          className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
-          <p className="text-muted-foreground text-sm">
-            {t("outfits.selectItemsDescription")}
-          </p>
-        </div>
-      </div>
+      {header}
 
       <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
         {/* Left: Selection Panel - fills available space */}

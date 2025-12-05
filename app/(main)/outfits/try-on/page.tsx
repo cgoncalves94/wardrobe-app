@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, Construction, Sparkles, Lock } from "lucide-react";
+import { ArrowLeft, Construction, Sparkles } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getUserSubscription } from "@/lib/supabase/subscription";
 import { isProRoute } from "@/lib/features";
+import ProFeatureGate from "@/components/ProFeatureGate";
 
 export default async function TryOnPage() {
   const t = await getTranslations();
@@ -34,25 +35,7 @@ export default async function TryOnPage() {
 
       {/* Pro Gate or Coming Soon */}
       {isProRoute("/outfits/try-on") && !subscription?.isPro ? (
-        <div className="rounded-xl border border-border bg-card py-16 text-center">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-secondary flex items-center justify-center">
-            <Lock className="w-8 h-8 text-foreground/70" />
-          </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-4 rounded-full bg-foreground text-background text-xs font-medium">
-            <Sparkles className="w-3 h-3" />
-            {t("pro.badge")}
-          </div>
-          <h2 className="text-xl font-semibold mb-3">{t("pro.featureLocked")}</h2>
-          <p className="text-muted-foreground max-w-md mx-auto mb-6 px-4">
-            {t("pro.tryOnLockedDescription")}
-          </p>
-          <Link
-            href="/upgrade"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
-          >
-            {t("pro.upgradeToPro")}
-          </Link>
-        </div>
+        <ProFeatureGate featureKey="tryOn" />
       ) : (
         <div className="rounded-xl border border-border bg-card py-16 text-center">
           <div className="w-16 h-16 mx-auto mb-6 rounded-xl bg-secondary flex items-center justify-center">
