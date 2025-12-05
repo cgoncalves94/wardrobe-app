@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Settings, LogOut } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -16,8 +17,13 @@ type Props = {
 export default function Header({ currentLocale }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const t = useTranslations();
   const handleLogout = useLogout();
+
+  // Check if a nav link is active (exact match for home, startsWith for others)
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -59,25 +65,41 @@ export default function Header({ currentLocale }: Props) {
         <nav className="hidden lg:flex items-center gap-1 text-sm">
           <Link
             href="/"
-            className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className={`px-3 py-2 rounded-lg transition-colors ${
+              isActive("/")
+                ? "bg-secondary text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
           >
             {t("nav.home")}
           </Link>
           <Link
             href="/items"
-            className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className={`px-3 py-2 rounded-lg transition-colors ${
+              isActive("/items")
+                ? "bg-secondary text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
           >
             {t("nav.items")}
           </Link>
           <Link
             href="/outfits"
-            className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className={`px-3 py-2 rounded-lg transition-colors ${
+              isActive("/outfits")
+                ? "bg-secondary text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
           >
             {t("nav.outfits")}
           </Link>
           <Link
             href="/categories"
-            className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className={`px-3 py-2 rounded-lg transition-colors ${
+              isActive("/categories")
+                ? "bg-secondary text-foreground font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            }`}
           >
             {t("nav.categories")}
           </Link>
