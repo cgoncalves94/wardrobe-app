@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateOutfitImage, generateOutfitFromPrompt, OutfitStyle, MannequinGender } from "@/lib/gemini";
 import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
+import { fetchImageAsBase64 } from "@/lib/images";
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,28 +65,11 @@ export async function POST(request: NextRequest) {
       const imageMap: Record<string, string> = {};
 
       for (const item of items || []) {
-        if (item.image_url) {
-          try {
-            const response = await fetch(item.image_url);
-            const contentType = response.headers.get("content-type") || "";
+        if (!item.image_url) continue;
 
-            // Verify we got an actual image, not an error response
-            if (!response.ok) {
-              console.error(`Failed to fetch image for item ${item.id}: HTTP ${response.status}`);
-              continue;
-            }
-
-            if (!contentType.startsWith("image/")) {
-              console.error(`Invalid content type for item ${item.id}: ${contentType}`);
-              continue;
-            }
-
-            const arrayBuffer = await response.arrayBuffer();
-            const base64 = Buffer.from(arrayBuffer).toString("base64");
-            imageMap[item.id] = base64;
-          } catch (e) {
-            console.error(`Failed to fetch image for item ${item.id}:`, e);
-          }
+        const base64 = await fetchImageAsBase64(item.image_url, `item ${item.id}`);
+        if (base64) {
+          imageMap[item.id] = base64;
         }
       }
 

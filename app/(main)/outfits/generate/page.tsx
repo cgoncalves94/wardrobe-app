@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useSubscription } from "@/hooks/use-subscription";
 import ProFeatureGate from "@/components/ProFeatureGate";
+import ItemSection from "@/components/ItemSection";
 import { toast } from "@/components/ui/sonner";
 import {
   Sparkles,
@@ -20,7 +21,6 @@ import {
   Check,
   Shirt,
   MessageSquare,
-  type LucideIcon,
 } from "lucide-react";
 import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
@@ -126,6 +126,48 @@ export default function GenerateOutfitPage() {
 
   const hasSelection = selectedHeadwear || selectedTop || selectedBottom || selectedFullBody || selectedFootwear || selectedAccessories.length > 0;
   const selectedCount = [selectedHeadwear, selectedTop, selectedBottom, selectedFullBody, selectedFootwear].filter(Boolean).length + selectedAccessories.length;
+  const genderLabels: Record<MannequinGender, string> = {
+    female: t("outfits.genders.female"),
+    male: t("outfits.genders.male"),
+  };
+  const itemSectionLabels = {
+    itemsAvailable: (count: number) => t("outfits.itemsAvailable", { count }),
+    noItemsInCategory: t("outfits.noItemsInCategory"),
+    selectItem: (name: string) => t("aria.selectItem", { name }),
+    clearSelection: t("aria.clearSelection"),
+  };
+  const mannequinControls = (
+    <>
+      <label className="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={useMannequin}
+          onChange={(e) => setUseMannequin(e.target.checked)}
+          className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
+        />
+        <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
+      </label>
+
+      {useMannequin && (
+        <div className="mt-3 flex gap-1.5">
+          {MANNEQUIN_GENDERS.map((g) => (
+            <button
+              key={g.value}
+              type="button"
+              onClick={() => setMannequinGender(g.value)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                mannequinGender === g.value
+                  ? "bg-foreground text-background"
+                  : "bg-secondary text-foreground hover:bg-secondary/80"
+              }`}
+            >
+              {g.emoji} {genderLabels[g.value]}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
 
   async function handleGenerate() {
     // Validate based on active tab
@@ -146,24 +188,24 @@ export default function GenerateOutfitPage() {
     setGeneratedImage(null);
 
     try {
-      const body = activeTab === "fromItems"
-        ? {
-            // From Items mode - specific items, no style
-            topItemId: selectedTop?.id,
-            bottomItemId: selectedBottom?.id,
-            fullBodyItemId: selectedFullBody?.id,
-            footwearItemId: selectedFootwear?.id,
-            accessoryIds: selectedAccessories.map((a) => a.id),
-            useMannequin,
-            mannequinGender,
-          }
-        : {
-            // AI Picks mode - text-to-image with occasion + style
-            occasion: occasion.trim(),
-            style,
-            useMannequin,
-            mannequinGender,
-          };
+      const body = {
+        useMannequin,
+        mannequinGender,
+        ...(activeTab === "fromItems"
+          ? {
+              // From Items mode - specific items, no style
+              topItemId: selectedTop?.id,
+              bottomItemId: selectedBottom?.id,
+              fullBodyItemId: selectedFullBody?.id,
+              footwearItemId: selectedFootwear?.id,
+              accessoryIds: selectedAccessories.map((a) => a.id),
+            }
+          : {
+              // AI Picks mode - text-to-image with occasion + style
+              occasion: occasion.trim(),
+              style,
+            }),
+      };
 
       const response = await fetch("/api/ai/generate-outfit", {
         method: "POST",
@@ -222,117 +264,6 @@ export default function GenerateOutfitPage() {
   }
 
   // Compact item selector component
-  function ItemSection({
-    id,
-    title,
-    items,
-    selected,
-    onSelect,
-    icon: Icon,
-  }: {
-    id: string;
-    title: string;
-    items: Item[];
-    selected: Item | null;
-    onSelect: (item: Item | null) => void;
-    icon: LucideIcon;
-  }) {
-    const isExpanded = expandedSection === id;
-
-    // When selected, show static header with clear button
-    // When not selected, show clickable header to expand
-    if (selected) {
-      return (
-        <div className="border border-border rounded-lg overflow-hidden">
-          <div className="flex items-center gap-3 p-3">
-            <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0 relative">
-              <Image
-                src={selected.image_url}
-                alt={selected.name}
-                fill
-                className="object-cover"
-                sizes="100px"
-              />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <Check className="w-5 h-5 text-white" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-medium">{title}</div>
-              <div className="text-xs text-muted-foreground">{selected.name}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onSelect(null)}
-              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={t("aria.clearSelection")}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="border border-border rounded-lg overflow-hidden">
-        {/* Header - clickable when no selection */}
-        <button
-          type="button"
-          onClick={() => setExpandedSection(isExpanded ? null : id)}
-          className="w-full flex items-center gap-3 p-3 hover:bg-secondary/50 transition-colors"
-        >
-          <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-muted-foreground" />
-          </div>
-          <div className="flex-1 text-left">
-            <div className="text-sm font-medium">{title}</div>
-            <div className="text-xs text-muted-foreground">{t("outfits.itemsAvailable", { count: items.length })}</div>
-          </div>
-          <ChevronDown
-            className={`w-4 h-4 text-muted-foreground transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {/* Expandable grid */}
-        {isExpanded && !selected && (
-          <div className="border-t border-border p-3 bg-secondary/30">
-            {items.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                {t("outfits.noItemsInCategory")}
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                {items.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      onSelect(item);
-                      setExpandedSection(null);
-                    }}
-                    aria-label={t("aria.selectItem", { name: item.name })}
-                    className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-foreground/30 transition-all hover:scale-105"
-                  >
-                    <Image
-                      src={item.image_url}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      sizes="150px"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   if (loading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -476,40 +407,7 @@ export default function GenerateOutfitPage() {
 
               {/* Mannequin Option */}
               <div className="pt-4 border-t border-border">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={useMannequin}
-                    onChange={(e) => setUseMannequin(e.target.checked)}
-                    className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
-                  />
-                  <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
-                </label>
-
-                {useMannequin && (
-                  <div className="mt-3 flex gap-1.5">
-                    {MANNEQUIN_GENDERS.map((g) => {
-                      const genderLabels: Record<string, string> = {
-                        female: t("outfits.genders.female"),
-                        male: t("outfits.genders.male"),
-                      };
-                      return (
-                        <button
-                          key={g.value}
-                          type="button"
-                          onClick={() => setMannequinGender(g.value)}
-                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                            mannequinGender === g.value
-                              ? "bg-foreground text-background"
-                              : "bg-secondary text-foreground hover:bg-secondary/80"
-                          }`}
-                        >
-                          {g.emoji} {genderLabels[g.value]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                {mannequinControls}
               </div>
             </div>
           )}
@@ -519,40 +417,7 @@ export default function GenerateOutfitPage() {
             <>
               {/* Mannequin Option - Compact */}
               <div className="p-4 rounded-xl border border-border bg-card">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={useMannequin}
-                    onChange={(e) => setUseMannequin(e.target.checked)}
-                    className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
-                  />
-                  <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
-                </label>
-
-                {useMannequin && (
-                  <div className="mt-3 flex gap-1.5">
-                    {MANNEQUIN_GENDERS.map((g) => {
-                      const genderLabels: Record<string, string> = {
-                        female: t("outfits.genders.female"),
-                        male: t("outfits.genders.male"),
-                      };
-                      return (
-                        <button
-                          key={g.value}
-                          type="button"
-                          onClick={() => setMannequinGender(g.value)}
-                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                            mannequinGender === g.value
-                              ? "bg-foreground text-background"
-                              : "bg-secondary text-foreground hover:bg-secondary/80"
-                          }`}
-                        >
-                          {g.emoji} {genderLabels[g.value]}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                {mannequinControls}
               </div>
 
               {/* Item Selectors - Accordion style */}
@@ -575,6 +440,9 @@ export default function GenerateOutfitPage() {
                   selected={selectedHeadwear}
                   onSelect={setSelectedHeadwear}
                   icon={getRootIcon("Headwear")}
+                  expandedSection={expandedSection}
+                  onExpandedChange={setExpandedSection}
+                  labels={itemSectionLabels}
                 />
               )}
 
@@ -585,6 +453,9 @@ export default function GenerateOutfitPage() {
                 selected={selectedTop}
                 onSelect={setSelectedTop}
                 icon={getRootIcon("Top")}
+                expandedSection={expandedSection}
+                onExpandedChange={setExpandedSection}
+                labels={itemSectionLabels}
               />
 
               <ItemSection
@@ -594,6 +465,9 @@ export default function GenerateOutfitPage() {
                 selected={selectedBottom}
                 onSelect={setSelectedBottom}
                 icon={getRootIcon("Bottom")}
+                expandedSection={expandedSection}
+                onExpandedChange={setExpandedSection}
+                labels={itemSectionLabels}
               />
 
               {fullBodyItems.length > 0 && (
@@ -604,6 +478,9 @@ export default function GenerateOutfitPage() {
                   selected={selectedFullBody}
                   onSelect={setSelectedFullBody}
                   icon={getRootIcon("Full Body")}
+                  expandedSection={expandedSection}
+                  onExpandedChange={setExpandedSection}
+                  labels={itemSectionLabels}
                 />
               )}
 
@@ -615,6 +492,9 @@ export default function GenerateOutfitPage() {
                   selected={selectedFootwear}
                   onSelect={setSelectedFootwear}
                   icon={getRootIcon("Footwear")}
+                  expandedSection={expandedSection}
+                  onExpandedChange={setExpandedSection}
+                  labels={itemSectionLabels}
                 />
               )}
 

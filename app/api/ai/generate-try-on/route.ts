@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateTryOnImage } from "@/lib/gemini";
 import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
+import { fetchImageAsBase64 } from "@/lib/images";
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,28 +57,12 @@ export async function POST(request: NextRequest) {
       const itemNames: string[] = [];
 
       for (const item of items || []) {
-        if (item.image_url) {
-          try {
-            const response = await fetch(item.image_url);
-            const contentType = response.headers.get("content-type") || "";
+        if (!item.image_url) continue;
 
-            if (!response.ok) {
-              console.error(`Failed to fetch image for item ${item.id}: HTTP ${response.status}`);
-              continue;
-            }
-
-            if (!contentType.startsWith("image/")) {
-              console.error(`Invalid content type for item ${item.id}: ${contentType}`);
-              continue;
-            }
-
-            const arrayBuffer = await response.arrayBuffer();
-            const base64 = Buffer.from(arrayBuffer).toString("base64");
-            clothingImagesBase64.push(base64);
-            itemNames.push(item.name);
-          } catch (e) {
-            console.error(`Failed to fetch image for item ${item.id}:`, e);
-          }
+        const base64 = await fetchImageAsBase64(item.image_url, `item ${item.id}`);
+        if (base64) {
+          clothingImagesBase64.push(base64);
+          itemNames.push(item.name);
         }
       }
 
@@ -89,27 +74,11 @@ export async function POST(request: NextRequest) {
 
     // Mode 2: Using a saved outfit image
     if (outfitImageUrl) {
-      try {
-        const response = await fetch(outfitImageUrl);
-        const contentType = response.headers.get("content-type") || "";
-
-        if (!response.ok) {
-          console.error(`Failed to fetch outfit image: HTTP ${response.status}`);
-          return NextResponse.json({ error: "Failed to fetch outfit image" }, { status: 400 });
-        }
-
-        if (!contentType.startsWith("image/")) {
-          console.error(`Invalid content type for outfit: ${contentType}`);
-          return NextResponse.json({ error: "Invalid outfit image format" }, { status: 400 });
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const base64 = Buffer.from(arrayBuffer).toString("base64");
-        clothingImagesBase64.push(base64);
-      } catch (e) {
-        console.error("Failed to fetch outfit image:", e);
+      const base64 = await fetchImageAsBase64(outfitImageUrl, "outfit image");
+      if (!base64) {
         return NextResponse.json({ error: "Failed to load outfit image" }, { status: 400 });
       }
+      clothingImagesBase64.push(base64);
     }
 
     if (clothingImagesBase64.length === 0) {

@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSubscription } from "@/hooks/use-subscription";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ImageUploader from "@/components/ImageUploader";
+import ItemSection from "@/components/ItemSection";
 import { toast } from "@/components/ui/sonner";
 import {
   Sparkles,
@@ -22,7 +23,6 @@ import {
   Camera,
   Shirt,
   ImageIcon,
-  type LucideIcon,
 } from "lucide-react";
 import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
@@ -143,6 +143,12 @@ export default function TryOnPage() {
 
   const hasItemSelection = selectedHeadwear || selectedTop || selectedBottom || selectedFullBody || selectedFootwear || selectedAccessories.length > 0;
   const selectedCount = [selectedHeadwear, selectedTop, selectedBottom, selectedFullBody, selectedFootwear].filter(Boolean).length + selectedAccessories.length;
+  const itemSectionLabels = {
+    itemsAvailable: (count: number) => t("outfits.itemsAvailable", { count }),
+    noItemsInCategory: t("outfits.noItemsInCategory"),
+    selectItem: (name: string) => t("aria.selectItem", { name }),
+    clearSelection: t("aria.clearSelection"),
+  };
 
   // Can generate if we have a photo AND either items selected OR an outfit selected
   const canGenerate = userPhotoUrl && (
@@ -306,116 +312,6 @@ export default function TryOnPage() {
   }
 
   // Compact item selector component
-  function ItemSection({
-    id,
-    title,
-    items,
-    selected,
-    onSelect,
-    icon: Icon,
-  }: {
-    id: string;
-    title: string;
-    items: Item[];
-    selected: Item | null;
-    onSelect: (item: Item | null) => void;
-    icon: LucideIcon;
-  }) {
-    const isExpanded = expandedSection === id;
-
-    // When selected, show static header with clear button
-    if (selected) {
-      return (
-        <div className="border border-border rounded-lg overflow-hidden">
-          <div className="flex items-center gap-3 p-3">
-            <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0 relative">
-              <Image
-                src={selected.image_url}
-                alt={selected.name}
-                fill
-                className="object-cover"
-                sizes="100px"
-              />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <Check className="w-5 h-5 text-white" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-medium">{title}</div>
-              <div className="text-xs text-muted-foreground">{selected.name}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onSelect(null)}
-              className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={t("aria.clearSelection")}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="border border-border rounded-lg overflow-hidden">
-        {/* Header - clickable when no selection */}
-        <button
-          type="button"
-          onClick={() => setExpandedSection(isExpanded ? null : id)}
-          className="w-full flex items-center gap-3 p-3 hover:bg-secondary/50 transition-colors"
-        >
-          <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center">
-            <Icon className="w-5 h-5 text-muted-foreground" />
-          </div>
-          <div className="flex-1 text-left">
-            <div className="text-sm font-medium">{title}</div>
-            <div className="text-xs text-muted-foreground">{t("outfits.itemsAvailable", { count: items.length })}</div>
-          </div>
-          <ChevronDown
-            className={`w-4 h-4 text-muted-foreground transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {/* Expandable grid */}
-        {isExpanded && !selected && (
-          <div className="border-t border-border p-3 bg-secondary/30">
-            {items.length === 0 ? (
-              <p className="text-center text-sm text-muted-foreground py-4">
-                {t("outfits.noItemsInCategory")}
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                {items.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      onSelect(item);
-                      setExpandedSection(null);
-                    }}
-                    aria-label={t("aria.selectItem", { name: item.name })}
-                    className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-foreground/30 transition-all hover:scale-105"
-                  >
-                    <Image
-                      src={item.image_url}
-                      alt={item.name}
-                      fill
-                      className="object-cover"
-                      sizes="150px"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   if (loading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -529,55 +425,70 @@ export default function TryOnPage() {
                 )}
 
                 {headwearItems.length > 0 && (
-                  <ItemSection
-                    id="headwear"
-                    title={t("categories.roots.headwear")}
-                    items={headwearItems}
-                    selected={selectedHeadwear}
-                    onSelect={setSelectedHeadwear}
-                    icon={getRootIcon("Headwear")}
-                  />
-                )}
-
                 <ItemSection
-                  id="top"
-                  title={t("categories.roots.top")}
-                  items={topItems}
-                  selected={selectedTop}
-                  onSelect={setSelectedTop}
-                  icon={getRootIcon("Top")}
+                  id="headwear"
+                  title={t("categories.roots.headwear")}
+                  items={headwearItems}
+                  selected={selectedHeadwear}
+                  onSelect={setSelectedHeadwear}
+                  icon={getRootIcon("Headwear")}
+                  expandedSection={expandedSection}
+                  onExpandedChange={setExpandedSection}
+                  labels={itemSectionLabels}
                 />
+              )}
 
+              <ItemSection
+                id="top"
+                title={t("categories.roots.top")}
+                items={topItems}
+                selected={selectedTop}
+                onSelect={setSelectedTop}
+                icon={getRootIcon("Top")}
+                expandedSection={expandedSection}
+                onExpandedChange={setExpandedSection}
+                labels={itemSectionLabels}
+              />
+
+              <ItemSection
+                id="bottom"
+                title={t("categories.roots.bottom")}
+                items={bottomItems}
+                selected={selectedBottom}
+                onSelect={setSelectedBottom}
+                icon={getRootIcon("Bottom")}
+                expandedSection={expandedSection}
+                onExpandedChange={setExpandedSection}
+                labels={itemSectionLabels}
+              />
+
+              {fullBodyItems.length > 0 && (
                 <ItemSection
-                  id="bottom"
-                  title={t("categories.roots.bottom")}
-                  items={bottomItems}
-                  selected={selectedBottom}
-                  onSelect={setSelectedBottom}
-                  icon={getRootIcon("Bottom")}
+                  id="fullbody"
+                  title={t("categories.roots.fullBody")}
+                  items={fullBodyItems}
+                  selected={selectedFullBody}
+                  onSelect={setSelectedFullBody}
+                  icon={getRootIcon("Full Body")}
+                  expandedSection={expandedSection}
+                  onExpandedChange={setExpandedSection}
+                  labels={itemSectionLabels}
                 />
+              )}
 
-                {fullBodyItems.length > 0 && (
-                  <ItemSection
-                    id="fullbody"
-                    title={t("categories.roots.fullBody")}
-                    items={fullBodyItems}
-                    selected={selectedFullBody}
-                    onSelect={setSelectedFullBody}
-                    icon={getRootIcon("Full Body")}
-                  />
-                )}
-
-                {footwearItems.length > 0 && (
-                  <ItemSection
-                    id="footwear"
-                    title={t("categories.roots.footwear")}
-                    items={footwearItems}
-                    selected={selectedFootwear}
-                    onSelect={setSelectedFootwear}
-                    icon={getRootIcon("Footwear")}
-                  />
-                )}
+              {footwearItems.length > 0 && (
+                <ItemSection
+                  id="footwear"
+                  title={t("categories.roots.footwear")}
+                  items={footwearItems}
+                  selected={selectedFootwear}
+                  onSelect={setSelectedFootwear}
+                  icon={getRootIcon("Footwear")}
+                  expandedSection={expandedSection}
+                  onExpandedChange={setExpandedSection}
+                  labels={itemSectionLabels}
+                />
+              )}
 
                 {/* Accessories - Multi-select */}
                 {accessoryItems.length > 0 && (() => {
