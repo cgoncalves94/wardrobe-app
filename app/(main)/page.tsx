@@ -1,13 +1,22 @@
 import Link from "next/link";
-import { Sparkles, Shirt, Wand2, FolderOpen, Plus, ArrowRight } from "lucide-react";
+import { Sparkles, Shirt, Wand2, FolderOpen, Plus, ArrowRight, Lock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { getUserSubscription } from "@/lib/supabase/subscription";
+import { isProRoute } from "@/lib/features";
 
 export default async function Home() {
   const t = await getTranslations("home");
   const tNav = await getTranslations("nav");
   const tCommon = await getTranslations("common");
+  const tPro = await getTranslations("pro");
+  const subscription = await getUserSubscription();
 
-  const quickActions = [
+  const quickActions: {
+    href: string;
+    icon: typeof Wand2;
+    title: string;
+    description: string;
+  }[] = [
     {
       href: "/outfits/generate",
       icon: Wand2,
@@ -85,7 +94,13 @@ export default async function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {quickActions.map((item) => (
             <Link key={item.href} href={item.href} className="group">
-              <div className="h-full p-6 rounded-xl border border-border bg-card hover:border-foreground/20 hover:bg-secondary/50 transition-all duration-300">
+              <div className="h-full p-6 rounded-xl border border-border bg-card hover:border-foreground/20 hover:bg-secondary/50 transition-all duration-300 relative">
+                {isProRoute(item.href) && !subscription?.isPro && (
+                  <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground text-background text-xs font-medium">
+                    <Lock className="w-3 h-3" />
+                    {tPro("badge")}
+                  </div>
+                )}
                 <div className="w-12 h-12 rounded-xl mb-4 flex items-center justify-center bg-secondary transition-transform group-hover:scale-105">
                   <item.icon className="w-6 h-6 text-foreground/70" />
                 </div>
@@ -101,7 +116,13 @@ export default async function Home() {
       <section>
         <h2 className="text-xl font-semibold mb-6">{t("features")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 rounded-xl border border-border bg-card">
+          <div className="p-6 rounded-xl border border-border bg-card relative">
+            {isProRoute("/outfits/generate") && !subscription?.isPro && (
+              <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground text-background text-xs font-medium">
+                <Lock className="w-3 h-3" />
+                {tPro("badge")}
+              </div>
+            )}
             <div className="flex items-start gap-4 mb-4">
               <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                 <Sparkles className="w-5 h-5 text-foreground/70" />
@@ -123,7 +144,13 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="p-6 rounded-xl border border-border bg-card">
+          <div className="p-6 rounded-xl border border-border bg-card relative">
+            {isProRoute("/outfits/try-on") && !subscription?.isPro && (
+              <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-foreground text-background text-xs font-medium">
+                <Lock className="w-3 h-3" />
+                {tPro("badge")}
+              </div>
+            )}
             <div className="flex items-start gap-4 mb-4">
               <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                 <Shirt className="w-5 h-5 text-foreground/70" />

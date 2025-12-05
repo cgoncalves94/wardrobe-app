@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateOutfitImage, OutfitStyle, MannequinGender } from "@/lib/gemini";
+import { isProRoute } from "@/lib/features";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,22 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check Pro subscription (only if feature is Pro-gated)
+    if (isProRoute("/outfits/generate")) {
+      const { data: subscription } = await supabase
+        .from("user_subscriptions")
+        .select("tier")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!subscription || subscription.tier !== "pro") {
+        return NextResponse.json(
+          { error: "PRO_REQUIRED", message: "This feature requires a Pro subscription" },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();

@@ -12,7 +12,8 @@
     "tryItNow": "Try it now",
     "noImage": "No image",
     "uncategorized": "Uncategorized",
-    "added": "Added"
+    "added": "Added",
+    "backToHome": "Back to Home"
   },
   "nav": {
     "home": "Home",
@@ -189,5 +190,27 @@
     "regenerateOutfit": "Regenerate outfit",
     "selectItem": "Select {name}",
     "deselectItem": "Deselect {name}"
+  },
+  "pro": {
+    "badge": "PRO",
+    "featureLocked": "Pro Feature",
+    "upgradeToPro": "Upgrade to Pro",
+    "generateLockedDescription": "Create stunning AI-generated outfit combinations with a Pro subscription.",
+    "tryOnLockedDescription": "See yourself wearing any outfit with our AI-powered virtual try-on feature.",
+    "upgradeTitle": "Upgrade to Pro",
+    "upgradeDescription": "Unlock the full power of AI styling",
+    "currentPlan": "Current Plan",
+    "freePlan": "Free",
+    "proPlan": "Pro",
+    "includesFeatures": "includes",
+    "youArePro": "You are a Pro subscriber!",
+    "stripeComingSoon": "Payment integration coming soon",
+    "contactSupport": "Contact support to upgrade manually",
+    "features": {
+      "aiOutfits": "AI Outfit Generation",
+      "aiOutfitsDesc": "Create unlimited AI-styled outfit combinations",
+      "virtualTryOn": "Virtual Try-On",
+      "virtualTryOnDesc": "See yourself wearing any outfit"
+    }
   }
 }

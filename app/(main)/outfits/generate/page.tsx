@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { useSubscription } from "@/hooks/use-subscription";
+import ProFeatureGate from "@/components/ProFeatureGate";
 import { toast } from "@/components/ui/sonner";
 import {
   Sparkles,
@@ -24,7 +26,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { OUTFIT_STYLES, OutfitStyle, MANNEQUIN_GENDERS, MannequinGender } from "@/lib/gemini-types";
+import { OUTFIT_STYLES, OutfitStyle, MANNEQUIN_GENDERS, MannequinGender } from "@/lib/gemini/types";
+import { isProRoute } from "@/lib/features";
 
 type Item = {
   id: string;
@@ -62,6 +65,7 @@ export default function GenerateOutfitPage() {
   const supabase = createClient();
   const router = useRouter();
   const t = useTranslations();
+  const { isPro, loading: subscriptionLoading } = useSubscription();
 
   // Close lightbox with Escape
   useEffect(() => {
@@ -299,7 +303,7 @@ export default function GenerateOutfitPage() {
     );
   }
 
-  if (loading) {
+  if (loading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
@@ -308,6 +312,31 @@ export default function GenerateOutfitPage() {
           </div>
           <p className="text-muted-foreground">{t("outfits.loadingWardrobe")}</p>
         </div>
+      </div>
+    );
+  }
+
+  // Gate: Show locked state for free users (only if feature is Pro-gated)
+  if (isProRoute("/outfits/generate") && !isPro) {
+    return (
+      <div className="pb-20 lg:pb-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            href="/outfits"
+            className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
+            <p className="text-muted-foreground text-sm">
+              {t("outfits.selectItemsDescription")}
+            </p>
+          </div>
+        </div>
+
+        <ProFeatureGate featureKey="generate" />
       </div>
     );
   }
