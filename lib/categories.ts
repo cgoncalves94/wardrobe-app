@@ -30,10 +30,18 @@ export const ROOT_CONFIG: RootConfig[] = [
 
 // Helper to get icon by root value
 export function getRootIcon(root: string): LucideIcon {
-  return ROOT_CONFIG.find((r) => r.dbValue === root)?.icon || Shirt;
+  const config = ROOT_CONFIG.find((r) => r.dbValue === root);
+  if (!config && process.env.NODE_ENV === "development") {
+    console.warn(`[Category] No icon found for category root: "${root}"`);
+  }
+  return config?.icon || Shirt;
 }
 
 // Helper to get translation key by root value
 export function getRootTranslationKey(root: string): string {
-  return ROOT_CONFIG.find((r) => r.dbValue === root)?.key || "top";
+  const config = ROOT_CONFIG.find((r) => r.dbValue === root);
+  if (!config && process.env.NODE_ENV === "development") {
+    console.warn(`[Category] No translation key found for category root: "${root}"`);
+  }
+  return config?.key || "top";
 }
