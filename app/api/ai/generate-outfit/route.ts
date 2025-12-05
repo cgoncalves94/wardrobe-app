@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateOutfitImage, OutfitStyle, MannequinGender } from "@/lib/gemini";
+import { isProRoute } from "@/lib/features";
+import { isProUser } from "@/lib/supabase/subscription";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +12,17 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check Pro subscription (only if feature is Pro-gated)
+    if (isProRoute("/outfits/generate")) {
+      const userIsPro = await isProUser();
+      if (!userIsPro) {
+        return NextResponse.json(
+          { error: "PRO_REQUIRED", message: "This feature requires a Pro subscription" },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();
@@ -38,6 +51,19 @@ export async function POST(request: NextRequest) {
       if (item.image_url) {
         try {
           const response = await fetch(item.image_url);
+          const contentType = response.headers.get("content-type") || "";
+
+          // Verify we got an actual image, not an error response
+          if (!response.ok) {
+            console.error(`Failed to fetch image for item ${item.id}: HTTP ${response.status}`);
+            continue;
+          }
+
+          if (!contentType.startsWith("image/")) {
+            console.error(`Invalid content type for item ${item.id}: ${contentType}`);
+            continue;
+          }
+
           const arrayBuffer = await response.arrayBuffer();
           const base64 = Buffer.from(arrayBuffer).toString("base64");
           imageMap[item.id] = base64;
@@ -45,6 +71,14 @@ export async function POST(request: NextRequest) {
           console.error(`Failed to fetch image for item ${item.id}:`, e);
         }
       }
+    }
+
+    // Validate that we have at least one valid image
+    if (Object.keys(imageMap).length === 0) {
+      return NextResponse.json(
+        { error: "Could not load any item images. Please check your wardrobe items." },
+        { status: 400 }
+      );
     }
 
     // Generate outfit image

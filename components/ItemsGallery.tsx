@@ -212,7 +212,7 @@ export default function ItemsGallery({
       {/* Grid */}
       {filteredItems.length > 0 ? (
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredItems.map((it) => (
+          {filteredItems.map((it, index) => (
             <li
               key={it.id}
               className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/20 transition-all"
@@ -233,6 +233,7 @@ export default function ItemsGallery({
                     fill
                     className="object-cover transition duration-300 group-hover:scale-105"
                     sizes="400px"
+                    priority={index < 4}
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-muted-foreground">

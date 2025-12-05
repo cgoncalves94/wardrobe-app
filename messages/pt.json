@@ -12,7 +12,8 @@
     "tryItNow": "Experimente agora",
     "noImage": "Sem imagem",
     "uncategorized": "Sem categoria",
-    "added": "Adicionado"
+    "added": "Adicionado",
+    "backToHome": "Voltar ao Início"
   },
   "nav": {
     "home": "Início",
@@ -189,5 +190,27 @@
     "regenerateOutfit": "Regenerar look",
     "selectItem": "Selecionar {name}",
     "deselectItem": "Desselecionar {name}"
+  },
+  "pro": {
+    "badge": "PRO",
+    "featureLocked": "Recurso Pro",
+    "upgradeToPro": "Assinar Pro",
+    "generateLockedDescription": "Crie combinações de looks incríveis geradas por IA com a assinatura Pro.",
+    "tryOnLockedDescription": "Veja-se usando qualquer look com nosso provador virtual com IA.",
+    "upgradeTitle": "Assinar Pro",
+    "upgradeDescription": "Desbloqueie todo o poder da estilização com IA",
+    "currentPlan": "Plano Atual",
+    "freePlan": "Gratuito",
+    "proPlan": "Pro",
+    "includesFeatures": "inclui",
+    "youArePro": "Você é assinante Pro!",
+    "stripeComingSoon": "Integração de pagamento em breve",
+    "contactSupport": "Entre em contato para fazer upgrade manualmente",
+    "features": {
+      "aiOutfits": "Geração de Looks com IA",
+      "aiOutfitsDesc": "Crie combinações de looks ilimitadas com IA",
+      "virtualTryOn": "Provador Virtual",
+      "virtualTryOnDesc": "Veja-se usando qualquer look"
+    }
   }
 }

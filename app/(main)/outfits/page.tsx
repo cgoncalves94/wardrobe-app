@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
 import { Sparkles, Wand2, Shirt, ArrowRight } from "lucide-react";
 import OutfitsGallery from "@/components/OutfitsGallery";
+import { getUserSubscription } from "@/lib/supabase/subscription";
+import { isProRoute } from "@/lib/features";
+import ProBadge from "@/components/ProBadge";
 
 export const revalidate = 0;
 
@@ -25,6 +28,7 @@ export default async function OutfitsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const t = await getTranslations();
+  const subscription = await getUserSubscription();
 
   if (!user) {
     return <div className="text-center py-12 text-muted-foreground">{t('auth.loginRequired', { resource: t('nav.outfits').toLowerCase() })}</div>;
@@ -54,7 +58,10 @@ export default async function OutfitsPage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link href="/outfits/generate" className="group">
-          <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4">
+          <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4 relative">
+            {isProRoute("/outfits/generate") && !subscription?.isPro && (
+              <ProBadge label={t('pro.badge')} />
+            )}
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-transform group-hover:scale-105">
               <Sparkles className="w-6 h-6 text-foreground/70" />
             </div>
@@ -69,7 +76,10 @@ export default async function OutfitsPage() {
         </Link>
 
         <Link href="/outfits/try-on" className="group">
-          <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4">
+          <div className="p-6 rounded-xl border border-border bg-card hover:border-foreground/20 transition-all flex items-center gap-4 relative">
+            {isProRoute("/outfits/try-on") && !subscription?.isPro && (
+              <ProBadge label={t('pro.badge')} />
+            )}
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-transform group-hover:scale-105">
               <Shirt className="w-6 h-6 text-foreground/70" />
             </div>

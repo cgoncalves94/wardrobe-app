@@ -177,6 +177,7 @@ export default function NewItemPage() {
             <label className="text-sm font-medium">{t('items.image')}</label>
             <ImageUploader
               bucket="wardrobe"
+              folder="items"
               onUploaded={(_, url) => setImageUrl(url)}
               imageUrl={imageUrl}
             />

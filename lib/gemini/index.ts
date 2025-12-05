@@ -1,6 +1,6 @@
 // Server-only module - do not import in client components
 import { GoogleGenAI } from "@google/genai";
-import type { OutfitStyle, MannequinGender } from "./gemini-types";
+import type { OutfitStyle, MannequinGender } from "./types";
 
 // Initialize the Gemini client (server-side only)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
@@ -50,8 +50,8 @@ async function withRetry<T>(
   throw lastError;
 }
 
-// Re-export type for API routes
-export type { OutfitStyle, MannequinGender } from "./gemini-types";
+// Re-export types for API routes
+export type { OutfitStyle, MannequinGender } from "./types";
 
 interface GenerateOutfitOptions {
   topImageBase64?: string;
@@ -83,7 +83,7 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   // Build the content parts
   const parts: any[] = [];
 
-  // Add clothing images
+  // Add clothing images (using jpeg as default - Gemini handles format detection)
   if (topImageBase64) {
     parts.push({
       inlineData: {
