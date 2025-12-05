@@ -602,9 +602,6 @@ export default function GenerateOutfitPage() {
                         ? t("outfits.clickGenerate")
                         : t("outfits.enterOccasionToStart")}
                     </p>
-                    <p className="text-xs text-muted-foreground/60">
-                      {t("outfits.generationTime")}
-                    </p>
                   </div>
                 </div>
               </div>
