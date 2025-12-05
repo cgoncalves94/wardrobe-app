@@ -7,11 +7,12 @@ import { Upload, ImageIcon, AlertCircle, RefreshCw } from "lucide-react";
 
 type Props = {
   bucket: string;
+  folder?: string;
   onUploaded: (path: string, publicUrl: string) => void;
   imageUrl?: string;
 };
 
-export default function ImageUploader({ bucket, onUploaded, imageUrl }: Props) {
+export default function ImageUploader({ bucket, folder, onUploaded, imageUrl }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +25,8 @@ export default function ImageUploader({ bucket, onUploaded, imageUrl }: Props) {
       setError(null);
 
       const ext = file.name.split(".").pop();
-      const filePath = `${crypto.randomUUID()}.${ext}`;
+      const fileName = `${crypto.randomUUID()}.${ext}`;
+      const filePath = folder ? `${folder}/${fileName}` : fileName;
 
       const { error: uploadError } = await supabase.storage
         .from(bucket)

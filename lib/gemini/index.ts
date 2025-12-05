@@ -83,7 +83,7 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   // Build the content parts
   const parts: any[] = [];
 
-  // Add clothing images
+  // Add clothing images (using jpeg as default - Gemini handles format detection)
   if (topImageBase64) {
     parts.push({
       inlineData: {

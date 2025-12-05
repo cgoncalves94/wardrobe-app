@@ -55,6 +55,19 @@ export async function POST(request: NextRequest) {
       if (item.image_url) {
         try {
           const response = await fetch(item.image_url);
+          const contentType = response.headers.get("content-type") || "";
+
+          // Verify we got an actual image, not an error response
+          if (!response.ok) {
+            console.error(`Failed to fetch image for item ${item.id}: HTTP ${response.status}`);
+            continue;
+          }
+
+          if (!contentType.startsWith("image/")) {
+            console.error(`Invalid content type for item ${item.id}: ${contentType}`);
+            continue;
+          }
+
           const arrayBuffer = await response.arrayBuffer();
           const base64 = Buffer.from(arrayBuffer).toString("base64");
           imageMap[item.id] = base64;
@@ -62,6 +75,14 @@ export async function POST(request: NextRequest) {
           console.error(`Failed to fetch image for item ${item.id}:`, e);
         }
       }
+    }
+
+    // Validate that we have at least one valid image
+    if (Object.keys(imageMap).length === 0) {
+      return NextResponse.json(
+        { error: "Could not load any item images. Please check your wardrobe items." },
+        { status: 400 }
+      );
     }
 
     // Generate outfit image
