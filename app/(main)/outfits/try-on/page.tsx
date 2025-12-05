@@ -649,7 +649,7 @@ export default function TryOnPage() {
         </div>
 
         {/* Right: Preview Panel */}
-        <div className="w-full lg:w-[380px] lg:flex-shrink-0">
+        <div className="w-full lg:w-[540px] lg:flex-shrink-0">
           <div className="h-full p-4 rounded-xl border border-border bg-card flex flex-col">
             <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-muted-foreground" />
