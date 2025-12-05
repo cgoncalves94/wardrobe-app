@@ -54,6 +54,7 @@ async function withRetry<T>(
 export type { OutfitStyle, MannequinGender } from "./types";
 
 interface GenerateOutfitOptions {
+  headwearImageBase64?: string;
   topImageBase64?: string;
   bottomImageBase64?: string;
   fullBodyImageBase64?: string;
@@ -77,12 +78,21 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   imageBase64: string;
   prompt: string;
 }> {
-  const { topImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, additionalPrompt, useMannequin = false, mannequinGender = "female" } = options;
+  const { headwearImageBase64, topImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, additionalPrompt, useMannequin = false, mannequinGender = "female" } = options;
 
   // Build the content parts
   const parts: any[] = [];
 
   // Add clothing images (using jpeg as default - Gemini handles format detection)
+  if (headwearImageBase64) {
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: headwearImageBase64,
+      },
+    });
+  }
+
   if (topImageBase64) {
     parts.push({
       inlineData: {
@@ -132,6 +142,7 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
 
   // Build dynamic description of what items were actually provided
   const providedItems: string[] = [];
+  if (headwearImageBase64) providedItems.push("headwear/hat");
   if (topImageBase64) providedItems.push("top/shirt");
   if (bottomImageBase64) providedItems.push("bottom/pants");
   if (fullBodyImageBase64) providedItems.push("full body piece/dress");
@@ -143,52 +154,51 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
 
   // Build prompt based on display mode (flat-lay vs mannequin)
   const prompt = useMannequin
-    ? `Create a professional fashion product photograph showing clothing on a ${mannequinGender} mannequin. I am providing exactly ${itemCount} clothing item image(s): ${itemList}.
+    ? `IMPORTANT: Generate a TALL VERTICAL image (portrait orientation, aspect ratio 3:4 or taller).
 
-PHOTOGRAPHY STYLE:
-- Full-body ${mannequinGender} mannequin (headless, standard retail display style)
-- Clean white/light gray studio background
-- Front-facing view, straight-on camera angle
-- Professional fashion retail photography aesthetic
-- Soft, even studio lighting with minimal shadows
-- The mannequin should be a neutral gray or white color
+Create a fashion product photo of clothing on a ${mannequinGender} mannequin. Items provided: ${itemList}.
 
-MANNEQUIN DISPLAY:
-- Clothing naturally draped and fitted on the mannequin
-- Show how the outfit would look when worn together
-- Mannequin in neutral standing pose
-- Full body shot showing all garments from shoulders to feet
+MANDATORY IMAGE FORMAT:
+- Image MUST be VERTICAL (height > width)
+- Aspect ratio: 3:4 minimum (like a phone screen)
+- Mannequin fills 90% of frame height
+- CROP TIGHT on the mannequin - minimal side margins
+- DO NOT generate wide/landscape images
 
-CRITICAL RULES:
-- Use ONLY the exact ${itemCount} clothing items I provided - nothing more
-- If no shoes were provided, mannequin has bare feet or cropped at ankles
-- If no accessories were provided, show zero accessories
-- Standard retail mannequin - NO human features, NO face, NO skin texture
-${additionalPrompt ? `\nAdditional notes: ${additionalPrompt}` : ""}
+SETUP:
+- ${mannequinGender} mannequin, headless, neutral gray/white
+- Simple white/light gray backdrop
+- Front view, centered
+- Full body: shoulders to feet
 
-Remember: This is a MANNEQUIN product photo for fashion retail, showing how the outfit looks when worn together.`
+RULES:
+- ONLY use the ${itemCount} items provided
+- No shoes provided = bare feet or crop at ankles
+- No extra accessories
+${additionalPrompt ? `\nNotes: ${additionalPrompt}` : ""}
+
+OUTPUT: A VERTICAL portrait-orientation fashion photo.`
 
     : `Create a professional top-down flat-lay fashion photograph. I am providing exactly ${itemCount} clothing item image(s): ${itemList}.
 
 PHOTOGRAPHY STYLE:
 - Camera angle: Directly overhead, bird's eye view looking straight down
-- Each garment laid FLAT and SEPARATELY on a clean white marble surface
+- Each item laid FLAT and SEPARATELY on a clean white marble surface
 - Items should NOT overlap or be arranged as if worn on a body/mannequin
 - Space between each item (2-3 inches gap)
-- Garments neatly folded or spread flat showing their full shape
+- CRITICAL: All garments must be FULLY UNFOLDED and SPREAD OPEN showing their complete shape - NO FOLDING
 - Soft natural window light from the left, creating gentle shadows
-- Magazine editorial flat-lay aesthetic, like a fashion blogger's Instagram post
+- Magazine editorial flat-lay aesthetic
 
 ARRANGEMENT:
-- Top garments placed in upper portion of frame
-- Bottom garments (pants/skirts) placed below with clear separation
-- Shoes placed at the bottom if provided
+- Arrange items vertically from top to bottom in logical outfit order (head to toe)
+- Accessories placed TO THE SIDE of main garments, NOT stacked below
 - Each piece clearly visible and distinct from others
 
 CRITICAL RULES:
-- Use ONLY the exact ${itemCount} clothing items I provided - nothing more
-- If no shoes were provided, do NOT add any footwear
-- If no accessories were provided, show zero accessories
+- Use ONLY the exact ${itemCount} clothing items I provided - nothing more, nothing less
+- Do NOT add any items that were not provided
+- MAINTAIN REALISTIC PROPORTIONS: all items must be to real-life human scale as if worn by the same person
 - Clean white/light gray background, no props or decorations
 ${additionalPrompt ? `\nAdditional notes: ${additionalPrompt}` : ""}
 
@@ -250,33 +260,33 @@ export async function generateOutfitFromPrompt(options: GenerateFromPromptOption
 
   // Build prompt based on display mode (flat-lay vs mannequin)
   const prompt = useMannequin
-    ? `Generate a professional fashion product photograph showing a complete outfit on a ${mannequinGender} mannequin.
+    ? `IMPORTANT: Generate a TALL VERTICAL image (portrait orientation, aspect ratio 3:4 or taller).
+
+Create a fashion product photo showing a complete outfit on a ${mannequinGender} mannequin.
 
 OCCASION: ${occasion}
 STYLE: ${styleDescriptions[style]}
 
-PHOTOGRAPHY STYLE:
-- Full-body ${mannequinGender} mannequin (headless, standard retail display style)
-- Clean white/light gray studio background
-- Front-facing view, straight-on camera angle
-- Professional fashion retail photography aesthetic
-- Soft, even studio lighting with minimal shadows
-- The mannequin should be a neutral gray or white color
+MANDATORY IMAGE FORMAT:
+- Image MUST be VERTICAL (height > width)
+- Aspect ratio: 3:4 minimum (like a phone screen)
+- Mannequin fills 90% of frame height
+- CROP TIGHT on the mannequin - minimal side margins
+- DO NOT generate wide/landscape images
 
-MANNEQUIN DISPLAY:
-- Complete coordinated outfit naturally draped and fitted on the mannequin
-- Show how the outfit would look when worn together
-- Mannequin in neutral standing pose
-- Full body shot showing all garments from shoulders to feet
+SETUP:
+- ${mannequinGender} mannequin, headless, neutral gray/white
+- Simple white/light gray backdrop
+- Front view, centered
+- Full body: shoulders to feet
 
-OUTFIT REQUIREMENTS:
-- Create a stylish, cohesive outfit appropriate for: ${occasion}
-- The overall aesthetic should be ${styleDescriptions[style]}
-- Include appropriate clothing items: top, bottom (or dress), footwear
-- Add accessories if suitable for the occasion
-- Standard retail mannequin - NO human features, NO face, NO skin texture
+OUTFIT:
+- Stylish, cohesive outfit for: ${occasion}
+- Aesthetic: ${styleDescriptions[style]}
+- Include: top, bottom (or dress), footwear
+- Add accessories if suitable
 
-Generate a single high-quality fashion photograph.`
+OUTPUT: A VERTICAL portrait-orientation fashion photo.`
 
     : `Generate a professional top-down flat-lay fashion photograph showing a complete outfit.
 
@@ -285,24 +295,24 @@ STYLE: ${styleDescriptions[style]}
 
 PHOTOGRAPHY STYLE:
 - Camera angle: Directly overhead, bird's eye view looking straight down
-- Each garment laid FLAT and SEPARATELY on a clean white marble surface
+- Each item laid FLAT and SEPARATELY on a clean white marble surface
 - Items should NOT overlap or be arranged as if worn on a body/mannequin
 - Space between each item (2-3 inches gap)
-- Garments neatly folded or spread flat showing their full shape
+- CRITICAL: All garments must be FULLY UNFOLDED and SPREAD OPEN showing their complete shape - NO FOLDING
 - Soft natural window light from the left, creating gentle shadows
-- Magazine editorial flat-lay aesthetic, like a fashion blogger's Instagram post
+- Magazine editorial flat-lay aesthetic
 
 ARRANGEMENT:
-- Top garments placed in upper portion of frame
-- Bottom garments (pants/skirts) placed below with clear separation
-- Shoes placed at the bottom
-- Accessories arranged around the main pieces
+- Arrange items vertically from top to bottom in logical outfit order (head to toe)
+- Accessories placed TO THE SIDE of main garments, NOT stacked below
+- Each piece clearly visible and distinct from others
 
 OUTFIT REQUIREMENTS:
 - Create a stylish, cohesive outfit appropriate for: ${occasion}
 - The overall aesthetic should be ${styleDescriptions[style]}
-- Include appropriate clothing items: top, bottom (or dress), footwear
+- Include appropriate clothing items for a complete outfit
 - Add accessories if suitable for the occasion
+- MAINTAIN REALISTIC PROPORTIONS: all items must be to real-life human scale as if worn by the same person
 - Clean white/light gray background, no props or decorations
 
 Generate a single high-quality fashion photograph.`;

@@ -21,7 +21,7 @@ export const OUTFIT_STYLES: { value: OutfitStyle; label: string; emoji: string }
 
 export type MannequinGender = "female" | "male";
 
-export const MANNEQUIN_GENDERS: { value: MannequinGender; label: string; emoji: string }[] = [
-  { value: "female", label: "Female", emoji: "👩" },
-  { value: "male", label: "Male", emoji: "👨" },
+export const MANNEQUIN_GENDERS: { value: MannequinGender; label: string }[] = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
 ];

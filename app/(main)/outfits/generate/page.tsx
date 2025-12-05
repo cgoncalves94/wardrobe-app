@@ -7,7 +7,8 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useSubscription } from "@/hooks/use-subscription";
 import ProFeatureGate from "@/components/ProFeatureGate";
-import ItemSection from "@/components/ItemSection";
+import ItemRow from "@/components/ItemRow";
+import ToggleButtonGroup from "@/components/ToggleButtonGroup";
 import { toast } from "@/components/ui/sonner";
 import {
   Sparkles,
@@ -17,14 +18,18 @@ import {
   RefreshCw,
   ArrowLeft,
   Loader2,
-  ChevronDown,
-  Check,
   Shirt,
   MessageSquare,
+  LayoutGrid,
+  PersonStanding,
+  Venus,
+  Mars,
+  Plus,
+  ChevronUp,
 } from "lucide-react";
 import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
-import { OUTFIT_STYLES, OutfitStyle, MANNEQUIN_GENDERS, MannequinGender } from "@/lib/gemini/types";
+import { OUTFIT_STYLES, OutfitStyle, MannequinGender } from "@/lib/gemini/types";
 import { isProRoute } from "@/lib/features";
 
 type TabType = "fromItems" | "aiPicks";
@@ -52,9 +57,6 @@ export default function GenerateOutfitPage() {
   const [selectedFootwear, setSelectedFootwear] = useState<Item | null>(null);
   const [selectedAccessories, setSelectedAccessories] = useState<Item[]>([]);
 
-  // Expanded sections
-  const [expandedSection, setExpandedSection] = useState<string | null>("top");
-
   // AI Picks state (for "AI Picks" tab)
   const [occasion, setOccasion] = useState("");
   const [style, setStyle] = useState<OutfitStyle>("casual");
@@ -68,6 +70,7 @@ export default function GenerateOutfitPage() {
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   const supabase = createClient();
   const router = useRouter();
@@ -83,15 +86,20 @@ export default function GenerateOutfitPage() {
     return () => document.removeEventListener("keydown", handleKey);
   }, [previewOpen]);
 
+  // Auto-open mobile sheet when generating starts or image is ready
+  useEffect(() => {
+    if (generating || generatedImage) {
+      setMobileSheetOpen(true);
+    }
+  }, [generating, generatedImage]);
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id || null);
 
-      // Load items for current user only
       const { data } = await supabase
         .from("items")
         .select("id, name, image_url, category_id, categories(name, root)")
@@ -105,79 +113,48 @@ export default function GenerateOutfitPage() {
   }, [supabase]);
 
   // Filter items by category root
-  const headwearItems = items.filter(
-    (item) => item.categories?.root === "Headwear"
-  );
-  const topItems = items.filter(
-    (item) => item.categories?.root === "Top"
-  );
-  const bottomItems = items.filter(
-    (item) => item.categories?.root === "Bottom"
-  );
-  const fullBodyItems = items.filter(
-    (item) => item.categories?.root === "Full Body"
-  );
-  const footwearItems = items.filter(
-    (item) => item.categories?.root === "Footwear"
-  );
-  const accessoryItems = items.filter(
-    (item) => item.categories?.root === "Accessories"
-  );
+  const headwearItems = items.filter((item) => item.categories?.root === "Headwear");
+  const topItems = items.filter((item) => item.categories?.root === "Top");
+  const bottomItems = items.filter((item) => item.categories?.root === "Bottom");
+  const fullBodyItems = items.filter((item) => item.categories?.root === "Full Body");
+  const footwearItems = items.filter((item) => item.categories?.root === "Footwear");
+  const accessoryItems = items.filter((item) => item.categories?.root === "Accessories");
 
-  const hasSelection = selectedHeadwear || selectedTop || selectedBottom || selectedFullBody || selectedFootwear || selectedAccessories.length > 0;
-  const selectedCount = [selectedHeadwear, selectedTop, selectedBottom, selectedFullBody, selectedFootwear].filter(Boolean).length + selectedAccessories.length;
+  // All selected items for the visual strip
+  const allSelected = [
+    selectedHeadwear,
+    selectedTop,
+    selectedBottom,
+    selectedFullBody,
+    selectedFootwear,
+    ...selectedAccessories,
+  ].filter(Boolean) as Item[];
+
+  const hasSelection = allSelected.length > 0;
+  const selectedCount = allSelected.length;
+
   const genderLabels: Record<MannequinGender, string> = {
     female: t("outfits.genders.female"),
     male: t("outfits.genders.male"),
   };
-  const itemSectionLabels = {
-    itemsAvailable: (count: number) => t("outfits.itemsAvailable", { count }),
-    noItemsInCategory: t("outfits.noItemsInCategory"),
-    selectItem: (name: string) => t("aria.selectItem", { name }),
-    clearSelection: t("aria.clearSelection"),
-  };
-  const mannequinControls = (
-    <>
-      <label className="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={useMannequin}
-          onChange={(e) => setUseMannequin(e.target.checked)}
-          className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
-        />
-        <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
-      </label>
 
-      {useMannequin && (
-        <div className="mt-3 flex gap-1.5">
-          {MANNEQUIN_GENDERS.map((g) => (
-            <button
-              key={g.value}
-              type="button"
-              onClick={() => setMannequinGender(g.value)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                mannequinGender === g.value
-                  ? "bg-foreground text-background"
-                  : "bg-secondary text-foreground hover:bg-secondary/80"
-              }`}
-            >
-              {g.emoji} {genderLabels[g.value]}
-            </button>
-          ))}
-        </div>
-      )}
-    </>
-  );
+  const styleLabels: Record<string, string> = {
+    casual: t("outfits.styles.casual"),
+    formal: t("outfits.styles.formal"),
+    "date-night": t("outfits.styles.dateNight"),
+    work: t("outfits.styles.work"),
+    street: t("outfits.styles.street"),
+    cozy: t("outfits.styles.cozy"),
+    elegant: t("outfits.styles.elegant"),
+  };
 
   async function handleGenerate() {
-    // Validate based on active tab
     if (activeTab === "fromItems") {
       if (!hasSelection) {
         toast.error(t("outfits.selectAtLeastOne"));
         return;
       }
     } else {
-      // AI Picks tab - need occasion
       if (!occasion.trim()) {
         toast.error(t("outfits.enterOccasion"));
         return;
@@ -193,7 +170,7 @@ export default function GenerateOutfitPage() {
         mannequinGender,
         ...(activeTab === "fromItems"
           ? {
-              // From Items mode - specific items, no style
+              headwearItemId: selectedHeadwear?.id,
               topItemId: selectedTop?.id,
               bottomItemId: selectedBottom?.id,
               fullBodyItemId: selectedFullBody?.id,
@@ -201,7 +178,6 @@ export default function GenerateOutfitPage() {
               accessoryIds: selectedAccessories.map((a) => a.id),
             }
           : {
-              // AI Picks mode - text-to-image with occasion + style
               occasion: occasion.trim(),
               style,
             }),
@@ -248,7 +224,7 @@ export default function GenerateOutfitPage() {
         generated_image_url: generatedImage,
         is_favorite: false,
         user_id: userId,
-        type: "outfit", // Regular outfit generation (not a try-on)
+        type: "outfit",
       });
 
       if (error) throw error;
@@ -263,53 +239,84 @@ export default function GenerateOutfitPage() {
     }
   }
 
-  // Compact item selector component
+  function clearAllSelections() {
+    setSelectedHeadwear(null);
+    setSelectedTop(null);
+    setSelectedBottom(null);
+    setSelectedFullBody(null);
+    setSelectedFootwear(null);
+    setSelectedAccessories([]);
+  }
+
+  // Loading state
   if (loading || subscriptionLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
-          <div className="w-14 h-14 mx-auto rounded-xl bg-secondary flex items-center justify-center">
-            <Sparkles className="w-7 h-7 text-foreground/70 animate-pulse" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-foreground/10 to-foreground/5 flex items-center justify-center">
+            <Sparkles className="w-8 h-8 text-foreground/50 animate-pulse" />
           </div>
-          <p className="text-muted-foreground">{t("outfits.loadingWardrobe")}</p>
+          <p className="text-muted-foreground text-sm">{t("outfits.loadingWardrobe")}</p>
         </div>
       </div>
     );
   }
 
-  // Header component to avoid duplication
-  const header = (
-    <div className="mb-6">
-      <div className="flex items-center gap-4 mb-4">
+  // Pro gate
+  if (isProRoute("/outfits/generate") && !isPro) {
+    return (
+      <div className="pb-20 lg:pb-8">
+        <div className="mb-6">
+          <Link
+            href="/outfits"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t("outfits.title")}
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("outfits.createOutfit")}</h1>
+        </div>
+        <ProFeatureGate featureKey="generate" />
+      </div>
+    );
+  }
+
+  // Extra padding only when mobile action bar is visible
+  const showMobileActionBar = activeTab === "aiPicks" || hasSelection;
+
+  return (
+    <div className={`lg:pb-8 ${showMobileActionBar ? "pb-24" : "pb-4"}`}>
+      {/* Header - Minimal */}
+      <div className="mb-6">
         <Link
           href="/outfits"
-          className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
+          {t("outfits.title")}
         </Link>
-        <div>
-          <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
-          <p className="text-muted-foreground text-sm">
-            {activeTab === "fromItems"
-              ? t("outfits.selectItemsDescription")
-              : t("outfits.aiPicksDescription")}
-          </p>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("outfits.createOutfit")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          {activeTab === "fromItems"
+            ? t("outfits.selectItemsDescription")
+            : t("outfits.aiPicksDescription")}
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-secondary rounded-lg w-fit">
+      {/* Mode Tabs */}
+      <div className={`flex gap-2 mb-6 ${generating ? "opacity-50 pointer-events-none" : ""}`}>
         <button
           type="button"
+          disabled={generating}
           onClick={() => {
             setActiveTab("fromItems");
             setGeneratedImage(null);
             setOutfitName("");
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+          className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
             activeTab === "fromItems"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-foreground text-background"
+              : "bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
           }`}
         >
           <Shirt className="w-4 h-4" />
@@ -317,314 +324,221 @@ export default function GenerateOutfitPage() {
         </button>
         <button
           type="button"
+          disabled={generating}
           onClick={() => {
             setActiveTab("aiPicks");
             setGeneratedImage(null);
             setOutfitName("");
           }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+          className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all ${
             activeTab === "aiPicks"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-foreground text-background"
+              : "bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
           }`}
         >
           <MessageSquare className="w-4 h-4" />
           {t("outfits.tabs.aiPicks")}
         </button>
       </div>
-    </div>
-  );
 
-  // Gate: Show locked state for free users (only if feature is Pro-gated)
-  if (isProRoute("/outfits/generate") && !isPro) {
-    return (
-      <div className="pb-20 lg:pb-8">
-        {header}
-        <ProFeatureGate featureKey="generate" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="pb-20 lg:pb-8">
-      {header}
-
-      <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
-        {/* Left: Selection Panel - fills available space */}
-        <div className="flex-1 space-y-4">
-          {/* AI Picks Tab Content */}
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* Left Column - Selection Area */}
+        <div className="space-y-6 lg:border-r lg:border-foreground/10 lg:pr-8">
+          {/* AI Picks Tab */}
           {activeTab === "aiPicks" && (
-            <div className="p-4 rounded-xl border border-border bg-card space-y-4">
+            <div className="space-y-6">
               {/* Occasion Input */}
-              <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                  {t("outfits.occasionLabel")}
-                </h3>
+              <div className="space-y-3">
+                <label className="text-sm font-medium">{t("outfits.occasionLabel")}</label>
                 <input
                   type="text"
                   value={occasion}
                   onChange={(e) => setOccasion(e.target.value)}
                   placeholder={t("outfits.occasionPlaceholder")}
-                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+                  className="w-full h-12 px-4 rounded-xl border-0 bg-secondary/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm"
                 />
               </div>
 
-              {/* Style Selection */}
-              <div>
-                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-muted-foreground" />
-                  {t("outfits.style")}
-                </h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {OUTFIT_STYLES.map((s) => {
-                    const styleLabels: Record<string, string> = {
-                      casual: t("outfits.styles.casual"),
-                      formal: t("outfits.styles.formal"),
-                      "date-night": t("outfits.styles.dateNight"),
-                      work: t("outfits.styles.work"),
-                      street: t("outfits.styles.street"),
-                      cozy: t("outfits.styles.cozy"),
-                      elegant: t("outfits.styles.elegant"),
-                    };
-                    return (
-                      <button
-                        key={s.value}
-                        type="button"
-                        onClick={() => setStyle(s.value)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                          style === s.value
-                            ? "bg-foreground text-background"
-                            : "bg-secondary text-foreground hover:bg-secondary/80"
-                        }`}
-                      >
-                        {s.emoji} {styleLabels[s.value]}
-                      </button>
-                    );
-                  })}
+              {/* Style Pills */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">{t("outfits.style")}</label>
+                <div className="flex flex-wrap gap-2">
+                  {OUTFIT_STYLES.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setStyle(s.value)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                        style === s.value
+                          ? "bg-foreground text-background"
+                          : "bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      {s.emoji} {styleLabels[s.value]}
+                    </button>
+                  ))}
                 </div>
-              </div>
-
-              {/* Mannequin Option */}
-              <div className="pt-4 border-t border-border">
-                {mannequinControls}
               </div>
             </div>
           )}
 
-          {/* From Items Tab Content */}
+          {/* From Items Tab */}
           {activeTab === "fromItems" && (
-            <>
-              {/* Mannequin Option - Compact */}
-              <div className="p-4 rounded-xl border border-border bg-card">
-                {mannequinControls}
-              </div>
-
-              {/* Item Selectors - Accordion style */}
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <h3 className="text-sm font-medium p-4 pb-3 border-b border-border">
-              {t("outfits.selectItems")}
-              {selectedCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-foreground text-background text-xs">
-                  {t("outfits.selected", { count: selectedCount })}
-                </span>
-              )}
-            </h3>
-
-            <div className="p-3 space-y-2">
-              {headwearItems.length > 0 && (
-                <ItemSection
-                  id="headwear"
-                  title={t("categories.roots.headwear")}
-                  items={headwearItems}
-                  selected={selectedHeadwear}
-                  onSelect={setSelectedHeadwear}
-                  icon={getRootIcon("Headwear")}
-                  expandedSection={expandedSection}
-                  onExpandedChange={setExpandedSection}
-                  labels={itemSectionLabels}
-                />
-              )}
-
-              <ItemSection
-                id="top"
-                title={t("categories.roots.top")}
-                items={topItems}
-                selected={selectedTop}
-                onSelect={setSelectedTop}
-                icon={getRootIcon("Top")}
-                expandedSection={expandedSection}
-                onExpandedChange={setExpandedSection}
-                labels={itemSectionLabels}
-              />
-
-              <ItemSection
-                id="bottom"
-                title={t("categories.roots.bottom")}
-                items={bottomItems}
-                selected={selectedBottom}
-                onSelect={setSelectedBottom}
-                icon={getRootIcon("Bottom")}
-                expandedSection={expandedSection}
-                onExpandedChange={setExpandedSection}
-                labels={itemSectionLabels}
-              />
-
-              {fullBodyItems.length > 0 && (
-                <ItemSection
-                  id="fullbody"
-                  title={t("categories.roots.fullBody")}
-                  items={fullBodyItems}
-                  selected={selectedFullBody}
-                  onSelect={setSelectedFullBody}
-                  icon={getRootIcon("Full Body")}
-                  expandedSection={expandedSection}
-                  onExpandedChange={setExpandedSection}
-                  labels={itemSectionLabels}
-                />
-              )}
-
-              {footwearItems.length > 0 && (
-                <ItemSection
-                  id="footwear"
-                  title={t("categories.roots.footwear")}
-                  items={footwearItems}
-                  selected={selectedFootwear}
-                  onSelect={setSelectedFootwear}
-                  icon={getRootIcon("Footwear")}
-                  expandedSection={expandedSection}
-                  onExpandedChange={setExpandedSection}
-                  labels={itemSectionLabels}
-                />
-              )}
-
-              {/* Accessories - Multi-select */}
-              {accessoryItems.length > 0 && (() => {
-                const AccessoriesIcon = getRootIcon("Accessories");
-                return (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedSection(expandedSection === "accessories" ? null : "accessories")}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center">
-                      <AccessoriesIcon className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <div className="text-sm font-medium">{t("categories.roots.accessories")}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {selectedAccessories.length > 0
-                          ? t("outfits.selected", { count: selectedAccessories.length })
-                          : t("outfits.itemsAvailable", { count: accessoryItems.length })}
-                      </div>
-                    </div>
-                    <ChevronDown
-                      className={`w-4 h-4 text-muted-foreground transition-transform ${
-                        expandedSection === "accessories" ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {expandedSection === "accessories" && (
-                    <div className="border-t border-border p-3 bg-secondary/30">
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                        {accessoryItems.map((item) => {
-                          const isSelected = selectedAccessories.some((a) => a.id === item.id);
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => {
-                                if (isSelected) {
-                                  setSelectedAccessories((prev) => prev.filter((a) => a.id !== item.id));
-                                } else {
-                                  setSelectedAccessories((prev) => [...prev, item]);
-                                }
-                              }}
-                              aria-label={isSelected ? t("aria.deselectItem", { name: item.name }) : t("aria.selectItem", { name: item.name })}
-                              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
-                                isSelected
-                                  ? "border-foreground ring-2 ring-foreground/20"
-                                  : "border-transparent hover:border-foreground/30"
-                              }`}
-                            >
-                              <Image
-                                src={item.image_url}
-                                alt={item.name}
-                                fill
-                                className="object-cover"
-                                sizes="150px"
-                              />
-                              {isSelected && (
-                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                  <Check className="w-5 h-5 text-white" />
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {selectedAccessories.length > 0 && (
+            <div className="space-y-5">
+              {/* Selected Items Strip */}
+              {hasSelection && (
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-foreground/[0.03] to-transparent border border-foreground/[0.06]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Your Outfit ({selectedCount})
+                    </span>
+                    <div className="flex items-center gap-3">
+                      {/* New Outfit button - mobile only when generated */}
+                      {generatedImage && (
                         <button
                           type="button"
-                          onClick={() => setSelectedAccessories([])}
-                          className="mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => {
+                            setGeneratedImage(null);
+                            setOutfitName("");
+                            clearAllSelections();
+                          }}
+                          className="text-xs font-medium text-foreground hover:opacity-70 transition-opacity lg:hidden"
                         >
-                          {t("outfits.clearAllAccessories")}
+                          {t("outfits.newOutfit")}
+                        </button>
+                      )}
+                      {/* Clear selection - hidden on mobile when generating/generated */}
+                      {!generating && !generatedImage && (
+                        <button
+                          type="button"
+                          onClick={clearAllSelections}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {t("aria.clearSelection")}
+                        </button>
+                      )}
+                      {/* Desktop only: show clear when generated */}
+                      {generatedImage && (
+                        <button
+                          type="button"
+                          onClick={clearAllSelections}
+                          className="hidden lg:block text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {t("aria.clearSelection")}
                         </button>
                       )}
                     </div>
-                  )}
-                </div>
-                );
-              })()}
-            </div>
-          </div>
-            </>
-          )}
-
-          {/* Generate Button - Shared across tabs */}
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating || (activeTab === "fromItems" ? !hasSelection : !occasion.trim())}
-            className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                {t("outfits.generating")}
-              </>
-            ) : (
-              <>
-                <Wand2 className="w-5 h-5" />
-                {t("outfits.generateOutfit")}
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Right: Preview Panel - Fixed width, stretches to match left panel */}
-        <div className="w-full lg:w-[380px] lg:flex-shrink-0">
-          <div className="h-full p-4 rounded-xl border border-border bg-card flex flex-col">
-            <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-muted-foreground" />
-              {t("outfits.preview")}
-            </h3>
-
-            <div className="flex-1 relative rounded-xl overflow-hidden bg-secondary min-h-[300px]">
-              {generating ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                  <Sparkles className="w-8 h-8 text-foreground/70 animate-pulse" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium">{t("outfits.creatingOutfit")}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t("outfits.generationTime")}
-                    </p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {allSelected.map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative w-14 h-14 rounded-lg overflow-hidden ring-1 ring-white/10"
+                      >
+                        <Image
+                          src={item.image_url}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          sizes="56px"
+                        />
+                      </div>
+                    ))}
+                    {/* Only show plus placeholder when not generated */}
+                    {!generatedImage && (
+                      <div className="w-14 h-14 rounded-lg border-2 border-dashed border-foreground/10 flex items-center justify-center text-muted-foreground/40">
+                        <Plus className="w-5 h-5" />
+                      </div>
+                    )}
                   </div>
                 </div>
-              ) : generatedImage ? (
+              )}
+
+              {/* Item Categories - Horizontal Scroll (hidden on mobile when generating/generated) */}
+              <div className={`space-y-5 ${generating || generatedImage ? "hidden lg:block" : ""}`}>
+                {headwearItems.length > 0 && (
+                  <ItemRow
+                    title={t("categories.roots.headwear")}
+                    items={headwearItems}
+                    selected={selectedHeadwear}
+                    onSelect={setSelectedHeadwear}
+                    icon={getRootIcon("Headwear")}
+                    disabled={generating}
+                  />
+                )}
+
+                <ItemRow
+                  title={t("categories.roots.top")}
+                  items={topItems}
+                  selected={selectedTop}
+                  onSelect={setSelectedTop}
+                  icon={getRootIcon("Top")}
+                  disabled={generating}
+                />
+
+                <ItemRow
+                  title={t("categories.roots.bottom")}
+                  items={bottomItems}
+                  selected={selectedBottom}
+                  onSelect={setSelectedBottom}
+                  icon={getRootIcon("Bottom")}
+                  disabled={generating}
+                />
+
+                {fullBodyItems.length > 0 && (
+                  <ItemRow
+                    title={t("categories.roots.fullBody")}
+                    items={fullBodyItems}
+                    selected={selectedFullBody}
+                    onSelect={setSelectedFullBody}
+                    icon={getRootIcon("Full Body")}
+                    disabled={generating}
+                  />
+                )}
+
+                {footwearItems.length > 0 && (
+                  <ItemRow
+                    title={t("categories.roots.footwear")}
+                    items={footwearItems}
+                    selected={selectedFootwear}
+                    onSelect={setSelectedFootwear}
+                    icon={getRootIcon("Footwear")}
+                    disabled={generating}
+                  />
+                )}
+
+                {accessoryItems.length > 0 && (
+                  <ItemRow
+                    title={t("categories.roots.accessories")}
+                    items={accessoryItems}
+                    icon={getRootIcon("Accessories")}
+                    multiSelect
+                    selectedMulti={selectedAccessories}
+                    onMultiSelect={setSelectedAccessories}
+                    disabled={generating}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column - Preview (always hidden on mobile, use bottom sheet instead) */}
+        <div className="hidden lg:flex lg:flex-col lg:sticky lg:top-4">
+          <div className="flex-1 min-h-[500px] relative rounded-2xl overflow-hidden bg-gradient-to-br from-secondary/80 to-secondary/40">
+            {generating ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-foreground/10 flex items-center justify-center">
+                  <Sparkles className="w-8 h-8 text-foreground/60 animate-pulse" />
+                </div>
+                <div className="text-center">
+                  <p className="font-medium">{t("outfits.creatingOutfit")}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("outfits.generationTime")}</p>
+                </div>
+              </div>
+            ) : generatedImage ? (
+              <>
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
@@ -636,54 +550,62 @@ export default function GenerateOutfitPage() {
                     alt={t("outfits.generateOutfit")}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 40vw"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                   />
                 </button>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground p-4">
-                  <Wand2 className="w-8 h-8" />
-                  <p className="text-center text-sm">
-                    {activeTab === "fromItems"
-                      ? (hasSelection ? t("outfits.clickGenerate") : t("outfits.selectItemsToStart"))
-                      : (occasion.trim() ? t("outfits.clickGenerate") : t("outfits.enterOccasionToStart"))}
-                  </p>
+                {/* Save overlay */}
+                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                  <input
+                    type="text"
+                    placeholder={t("outfits.nameOutfitPlaceholder")}
+                    value={outfitName}
+                    onChange={(e) => setOutfitName(e.target.value)}
+                    className="w-full h-10 px-4 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm mb-2"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving || !outfitName.trim()}
+                      className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-white text-black font-medium text-sm hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {t("outfits.save")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerate}
+                      disabled={generating}
+                      aria-label={t("aria.regenerateOutfit")}
+                      className="w-10 h-10 flex items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            {/* Save Section */}
-            {generatedImage && !generating && (
-              <div className="mt-4 space-y-3">
-                <input
-                  type="text"
-                  placeholder={t("outfits.nameOutfitPlaceholder")}
-                  value={outfitName}
-                  onChange={(e) => setOutfitName(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saving || !outfitName.trim()}
-                    className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    {t("outfits.save")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleGenerate}
-                    disabled={generating}
-                    aria-label={t("aria.regenerateOutfit")}
-                    className="w-10 h-10 flex items-center justify-center rounded-lg border border-border hover:bg-secondary transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
+              </>
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-6">
+                {/* Decorative grid pattern */}
+                <div className="absolute inset-0 opacity-[0.015] pattern-grid" />
+                <div className="relative flex flex-col items-center gap-4">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-foreground/[0.08] to-foreground/[0.02] flex items-center justify-center border border-foreground/[0.05]">
+                    <Wand2 className="w-9 h-9 text-foreground/25" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-medium text-foreground/50">
+                      {activeTab === "fromItems"
+                        ? hasSelection
+                          ? t("outfits.clickGenerate")
+                          : t("outfits.selectItemsToStart")
+                        : occasion.trim()
+                        ? t("outfits.clickGenerate")
+                        : t("outfits.enterOccasionToStart")}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60">
+                      {t("outfits.generationTime")}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -691,10 +613,279 @@ export default function GenerateOutfitPage() {
         </div>
       </div>
 
-      {/* Preview Lightbox */}
+      {/* Mobile: Fixed Bottom Action Bar - only shows when items selected or in AI Picks mode */}
+      {showMobileActionBar && (
+        <div className={`fixed bottom-16 left-0 right-0 z-40 lg:hidden bg-background border-t border-foreground/[0.08] ${generating ? "pointer-events-none" : ""}`}>
+          <div className={`px-4 py-3 space-y-2.5 ${generating ? "opacity-50" : ""}`}>
+            {/* Options Row */}
+            <div className="flex items-center gap-2">
+              {/* Layout Toggle */}
+              <ToggleButtonGroup
+                options={[
+                  { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+                  { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-3.5 h-3.5" /> },
+                ]}
+                value={useMannequin ? "mannequin" : "flatlay"}
+                onChange={(val) => setUseMannequin(val === "mannequin")}
+                disabled={generating}
+                size="sm"
+                stretch={!useMannequin}
+              />
+
+              {/* Gender Toggle - Only when mannequin */}
+              {useMannequin && (
+                <ToggleButtonGroup
+                  options={[
+                    { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-3.5 h-3.5" /> },
+                    { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-3.5 h-3.5" /> },
+                  ]}
+                  value={mannequinGender}
+                  onChange={(val) => setMannequinGender(val as MannequinGender)}
+                  disabled={generating}
+                  size="sm"
+                />
+              )}
+            </div>
+
+            {/* Generate Button */}
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating || (activeTab === "fromItems" ? !hasSelection : !occasion.trim())}
+              className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {t("outfits.generating")}
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4" />
+                  {t("outfits.generateOutfit")}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile: Bottom Sheet for Generated Result */}
+      {(generating || generatedImage) && (
+        <div
+          className={`fixed inset-0 z-50 lg:hidden transition-all duration-300 ${
+            mobileSheetOpen ? "pointer-events-auto" : "pointer-events-none"
+          }`}
+        >
+          {/* Backdrop */}
+          <div
+            className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${
+              mobileSheetOpen ? "opacity-100" : "opacity-0"
+            }`}
+            onClick={() => !generating && setMobileSheetOpen(false)}
+          />
+
+          {/* Sheet - positioned above main nav, always captures clicks */}
+          <div
+            className={`absolute bottom-16 left-0 right-0 bg-background rounded-t-3xl transition-transform duration-300 ease-out pointer-events-auto ${
+              mobileSheetOpen ? "translate-y-0" : "translate-y-[calc(100%-80px)]"
+            }`}
+          >
+            {/* Handle */}
+            <button
+              type="button"
+              onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
+              className="w-full pt-3 pb-2 flex justify-center"
+              aria-label={mobileSheetOpen ? t("aria.collapsePreview") : t("aria.expandPreview")}
+            >
+              <div className="w-10 h-1 rounded-full bg-foreground/20" />
+            </button>
+
+            {/* Preview Mini Header (visible when collapsed) - clickable to expand */}
+            <button
+              type="button"
+              onClick={() => setMobileSheetOpen(true)}
+              className={`w-full px-4 pb-3 flex items-center gap-3 transition-opacity text-left ${
+                mobileSheetOpen ? "opacity-0 h-0 overflow-hidden pointer-events-none" : "opacity-100"
+              }`}
+            >
+              {generating ? (
+                <>
+                  <div className="w-12 h-12 rounded-xl bg-secondary/80 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-foreground/60 animate-pulse" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{t("outfits.creatingOutfit")}</p>
+                    <p className="text-xs text-muted-foreground">{t("outfits.generationTime")}</p>
+                  </div>
+                </>
+              ) : generatedImage ? (
+                <>
+                  <div className="w-12 h-12 rounded-xl overflow-hidden relative">
+                    <Image src={generatedImage} alt="" fill className="object-cover" sizes="48px" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{t("outfits.outfitReady")}</p>
+                    <p className="text-xs text-muted-foreground">{t("outfits.tapToExpand")}</p>
+                  </div>
+                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                </>
+              ) : null}
+            </button>
+
+            {/* Full Preview Content */}
+            <div
+              className={`transition-all duration-300 max-h-[calc(100vh-100px)] ${
+                mobileSheetOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+            >
+              <div className="px-4 pb-8 overflow-y-auto max-h-[calc(100vh-140px)]">
+                {generating ? (
+                  <div className="aspect-[3/4] rounded-2xl bg-secondary/50 flex flex-col items-center justify-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-foreground/10 flex items-center justify-center">
+                      <Sparkles className="w-10 h-10 text-foreground/60 animate-pulse" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-medium text-lg">{t("outfits.creatingOutfit")}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{t("outfits.generationTime")}</p>
+                    </div>
+                  </div>
+                ) : generatedImage ? (
+                  <div className="space-y-4">
+                    {/* Image Preview */}
+                    <button
+                      type="button"
+                      onClick={() => setPreviewOpen(true)}
+                      className="w-full aspect-[3/4] relative rounded-2xl overflow-hidden"
+                    >
+                      <Image
+                        src={generatedImage}
+                        alt={t("outfits.generateOutfit")}
+                        fill
+                        className="object-cover"
+                        sizes="100vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                      <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs">
+                        {t("outfits.tapToZoom")}
+                      </div>
+                    </button>
+
+                    {/* Save Form */}
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        placeholder={t("outfits.nameOutfitPlaceholder")}
+                        value={outfitName}
+                        onChange={(e) => setOutfitName(e.target.value)}
+                        className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSave}
+                          disabled={saving || !outfitName.trim()}
+                          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                        >
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          {t("outfits.save")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleGenerate}
+                          disabled={generating}
+                          aria-label={t("aria.regenerateOutfit")}
+                          className="w-12 h-12 flex items-center justify-center rounded-xl bg-secondary/80 text-foreground transition-colors active:scale-[0.98]"
+                        >
+                          <RefreshCw className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGeneratedImage(null);
+                            setOutfitName("");
+                            setMobileSheetOpen(false);
+                          }}
+                          aria-label={t("outfits.newOutfit")}
+                          className="w-12 h-12 flex items-center justify-center rounded-xl bg-secondary/80 text-foreground transition-colors active:scale-[0.98]"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Action Bar */}
+      <div className="hidden lg:block mt-8">
+        <div className="flex items-center gap-3 p-3 rounded-2xl bg-secondary/50">
+          {/* Layout Mode Toggle */}
+          <div className={`flex items-center gap-2 ${generating ? "opacity-50 pointer-events-none" : ""}`}>
+            <ToggleButtonGroup
+              options={[
+                { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+                { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-3.5 h-3.5" /> },
+              ]}
+              value={useMannequin ? "mannequin" : "flatlay"}
+              onChange={(val) => setUseMannequin(val === "mannequin")}
+              disabled={generating}
+              size="md"
+            />
+
+            {/* Gender Toggle - Only when mannequin */}
+            {useMannequin && (
+              <ToggleButtonGroup
+                options={[
+                  { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-3.5 h-3.5" /> },
+                  { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-3.5 h-3.5" /> },
+                ]}
+                value={mannequinGender}
+                onChange={(val) => setMannequinGender(val as MannequinGender)}
+                disabled={generating}
+                size="sm"
+              />
+            )}
+          </div>
+
+          {/* Mode description */}
+          <span className="text-xs text-muted-foreground">
+            {useMannequin ? t("outfits.layoutMannequinDesc") : t("outfits.layoutFlatLayDesc")}
+          </span>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Generate Button */}
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating || (activeTab === "fromItems" ? !hasSelection : !occasion.trim())}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t("outfits.generating")}
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-4 h-4" />
+                {t("outfits.generateOutfit")}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Preview Lightbox - z-[100] to be above everything including bottom nav */}
       {previewOpen && generatedImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/95"
+          className="fixed inset-0 z-[100] bg-black"
           onClick={() => setPreviewOpen(false)}
           role="dialog"
           aria-modal="true"
@@ -702,15 +893,12 @@ export default function GenerateOutfitPage() {
           <button
             type="button"
             onClick={() => setPreviewOpen(false)}
-            className="absolute top-4 right-4 p-3 rounded-full bg-black/60 text-white/90 hover:text-white hover:bg-black/80 transition-colors z-10"
+            className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
             aria-label={t("aria.closeDialog")}
           >
             <X className="w-6 h-6" />
           </button>
-          <div
-            className="relative w-full h-full p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="relative w-full h-full p-4" onClick={(e) => e.stopPropagation()}>
             <Image
               src={generatedImage}
               alt={t("outfits.generateOutfit")}

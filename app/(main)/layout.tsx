@@ -11,10 +11,10 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <>
       <Header currentLocale={locale} />
-      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 py-6 sm:py-8 pb-24 lg:pb-8 min-h-[calc(100vh-140px)]">
+      <main className="mx-auto max-w-[1400px] px-4 sm:px-6 py-6 sm:py-8 pb-20 lg:pb-8 min-h-[calc(100vh-140px)]">
         {children}
       </main>
-      <footer className="border-t border-border/50 pb-20 lg:pb-0">
+      <footer className="border-t border-border/50 pb-16 lg:pb-0">
         <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-6 text-center text-sm text-muted-foreground">
           {t("common.appStudio")}
         </div>
