@@ -167,6 +167,7 @@
     "cannotDelete": "Cannot delete: there are items using this category.",
     "deleteBlocked": "Delete was blocked by the database. Check RLS policies.",
     "roots": {
+      "headwear": "Headwear",
       "top": "Top",
       "bottom": "Bottom",
       "fullBody": "Full Body",

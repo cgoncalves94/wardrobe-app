@@ -4,7 +4,7 @@ export interface Category {
   id: string;
   user_id: string | null;
   name: string;
-  root: 'Top' | 'Bottom' | 'Full Body' | 'Footwear' | 'Accessories';
+  root: 'Headwear' | 'Top' | 'Bottom' | 'Full Body' | 'Footwear' | 'Accessories';
   created_at?: string;
 }
 
