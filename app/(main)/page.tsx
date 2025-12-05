@@ -61,7 +61,7 @@ export default async function Home() {
       <section>
         <h2 className="text-xl font-semibold mb-6">{t("features")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-6 rounded-xl border border-border bg-card relative">
+          <div className="p-6 rounded-xl border border-border bg-card relative flex flex-col h-full">
             {isProRoute("/outfits/generate") && !subscription?.isPro && (
               <ProBadge label={tPro("badge")} />
             )}
@@ -74,19 +74,19 @@ export default async function Home() {
                 <p className="text-sm text-muted-foreground">{t("mixMatch")}</p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-6">
               {t("aiOutfitGeneratorDescription")}
             </p>
             <Link
               href="/outfits/generate"
-              className="inline-flex items-center gap-1 text-sm font-medium hover:gap-2 transition-all"
+              className="inline-flex items-center gap-1 text-sm font-medium hover:gap-2 transition-all mt-auto"
             >
               {tCommon("tryItNow")}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="p-6 rounded-xl border border-border bg-card relative">
+          <div className="p-6 rounded-xl border border-border bg-card relative flex flex-col h-full">
             {isProRoute("/outfits/try-on") && !subscription?.isPro && (
               <ProBadge label={tPro("badge")} />
             )}
@@ -99,12 +99,12 @@ export default async function Home() {
                 <p className="text-sm text-muted-foreground">{t("seeYourselfOutfit")}</p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-6">
               {t("virtualTryOnDescription")}
             </p>
             <Link
               href="/outfits/try-on"
-              className="inline-flex items-center gap-1 text-sm font-medium hover:gap-2 transition-all"
+              className="inline-flex items-center gap-1 text-sm font-medium hover:gap-2 transition-all mt-auto"
             >
               {tCommon("tryItNow")}
               <ArrowRight className="w-4 h-4" />

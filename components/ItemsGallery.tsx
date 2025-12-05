@@ -151,19 +151,19 @@ export default function ItemsGallery({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-xl font-semibold">{t('items.title')}</h2>
         <div className="flex items-center gap-2">
           <Link
             href="/outfits/generate"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:bg-secondary transition-colors font-medium"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm sm:px-5 sm:py-2.5 sm:text-base rounded-lg border border-border hover:bg-secondary transition-colors font-medium"
           >
             <Wand2 className="w-4 h-4" />
             {t('outfits.createOutfit')}
           </Link>
           <Link
             href="/items/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
+            className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" />
             {t('items.addItem')}
