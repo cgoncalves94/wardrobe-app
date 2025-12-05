@@ -31,7 +31,7 @@ The server client is async (`await createClient()`), the browser client is sync.
 
 **Database schema** (see `supabase/schema.sql`):
 
-- `categories` - Clothing types with root enum: Top, Bottom, Full Body, Footwear, Accessories
+- `categories` - Clothing types with root enum: Headwear, Top, Bottom, Full Body, Footwear, Accessories (see `lib/categories.ts` for shared config)
 - `items` - Wardrobe items with image URLs (stored in `wardrobe` bucket), category references
 - `outfits` - AI-generated outfit compositions
 

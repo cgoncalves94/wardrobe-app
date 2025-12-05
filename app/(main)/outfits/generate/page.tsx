@@ -11,7 +11,6 @@ import { toast } from "@/components/ui/sonner";
 import {
   Sparkles,
   Wand2,
-  Shirt,
   X,
   Save,
   RefreshCw,
@@ -19,12 +18,9 @@ import {
   Loader2,
   ChevronDown,
   Check,
-  RectangleVertical,
-  PersonStanding,
-  Footprints,
-  Watch,
   type LucideIcon,
 } from "lucide-react";
+import { ROOT_CONFIG, getRootIcon } from "@/lib/categories";
 import Link from "next/link";
 import { OUTFIT_STYLES, OutfitStyle, MANNEQUIN_GENDERS, MannequinGender } from "@/lib/gemini/types";
 import { isProRoute } from "@/lib/features";
@@ -42,6 +38,7 @@ export default function GenerateOutfitPage() {
   const [loading, setLoading] = useState(true);
 
   // Selected items
+  const [selectedHeadwear, setSelectedHeadwear] = useState<Item | null>(null);
   const [selectedTop, setSelectedTop] = useState<Item | null>(null);
   const [selectedBottom, setSelectedBottom] = useState<Item | null>(null);
   const [selectedFullBody, setSelectedFullBody] = useState<Item | null>(null);
@@ -98,6 +95,9 @@ export default function GenerateOutfitPage() {
   }, [supabase]);
 
   // Filter items by category root
+  const headwearItems = items.filter(
+    (item) => item.categories?.root === "Headwear"
+  );
   const topItems = items.filter(
     (item) => item.categories?.root === "Top"
   );
@@ -114,8 +114,8 @@ export default function GenerateOutfitPage() {
     (item) => item.categories?.root === "Accessories"
   );
 
-  const hasSelection = selectedTop || selectedBottom || selectedFullBody || selectedFootwear || selectedAccessories.length > 0;
-  const selectedCount = [selectedTop, selectedBottom, selectedFullBody, selectedFootwear].filter(Boolean).length + selectedAccessories.length;
+  const hasSelection = selectedHeadwear || selectedTop || selectedBottom || selectedFullBody || selectedFootwear || selectedAccessories.length > 0;
+  const selectedCount = [selectedHeadwear, selectedTop, selectedBottom, selectedFullBody, selectedFootwear].filter(Boolean).length + selectedAccessories.length;
 
   async function handleGenerate() {
     if (!hasSelection) {
@@ -436,13 +436,24 @@ export default function GenerateOutfitPage() {
             </h3>
 
             <div className="p-3 space-y-2">
+              {headwearItems.length > 0 && (
+                <ItemSection
+                  id="headwear"
+                  title={t("categories.roots.headwear")}
+                  items={headwearItems}
+                  selected={selectedHeadwear}
+                  onSelect={setSelectedHeadwear}
+                  icon={getRootIcon("Headwear")}
+                />
+              )}
+
               <ItemSection
                 id="top"
                 title={t("categories.roots.top")}
                 items={topItems}
                 selected={selectedTop}
                 onSelect={setSelectedTop}
-                icon={Shirt}
+                icon={getRootIcon("Top")}
               />
 
               <ItemSection
@@ -451,7 +462,7 @@ export default function GenerateOutfitPage() {
                 items={bottomItems}
                 selected={selectedBottom}
                 onSelect={setSelectedBottom}
-                icon={RectangleVertical}
+                icon={getRootIcon("Bottom")}
               />
 
               {fullBodyItems.length > 0 && (
@@ -461,7 +472,7 @@ export default function GenerateOutfitPage() {
                   items={fullBodyItems}
                   selected={selectedFullBody}
                   onSelect={setSelectedFullBody}
-                  icon={PersonStanding}
+                  icon={getRootIcon("Full Body")}
                 />
               )}
 
@@ -472,12 +483,14 @@ export default function GenerateOutfitPage() {
                   items={footwearItems}
                   selected={selectedFootwear}
                   onSelect={setSelectedFootwear}
-                  icon={Footprints}
+                  icon={getRootIcon("Footwear")}
                 />
               )}
 
               {/* Accessories - Multi-select */}
-              {accessoryItems.length > 0 && (
+              {accessoryItems.length > 0 && (() => {
+                const AccessoriesIcon = getRootIcon("Accessories");
+                return (
                 <div className="border border-border rounded-lg overflow-hidden">
                   <button
                     type="button"
@@ -485,7 +498,7 @@ export default function GenerateOutfitPage() {
                     className="w-full flex items-center gap-3 p-3 hover:bg-secondary/50 transition-colors"
                   >
                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center">
-                      <Watch className="w-5 h-5 text-muted-foreground" />
+                      <AccessoriesIcon className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 text-left">
                       <div className="text-sm font-medium">{t("categories.roots.accessories")}</div>
@@ -553,7 +566,8 @@ export default function GenerateOutfitPage() {
                     </div>
                   )}
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
 

@@ -6,15 +6,8 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import ImageUploader from '@/components/ImageUploader';
 import { toast } from '@/components/ui/sonner';
-import { ArrowLeft, Loader2, ChevronDown, Shirt, RectangleVertical, PersonStanding, Footprints, Watch, Check, type LucideIcon } from 'lucide-react';
-
-const ROOT_CONFIG: { key: string; dbValue: string; icon: LucideIcon }[] = [
-  { key: 'top', dbValue: 'Top', icon: Shirt },
-  { key: 'bottom', dbValue: 'Bottom', icon: RectangleVertical },
-  { key: 'fullBody', dbValue: 'Full Body', icon: PersonStanding },
-  { key: 'footwear', dbValue: 'Footwear', icon: Footprints },
-  { key: 'accessories', dbValue: 'Accessories', icon: Watch },
-];
+import { ArrowLeft, Loader2, ChevronDown, Check } from 'lucide-react';
+import { ROOT_CONFIG } from '@/lib/categories';
 
 export default function NewItemPage() {
   const [name, setName] = useState('');

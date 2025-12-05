@@ -167,6 +167,7 @@
     "cannotDelete": "Não é possível excluir: há peças usando esta categoria.",
     "deleteBlocked": "Exclusão bloqueada pelo banco de dados. Verifique as políticas RLS.",
     "roots": {
+      "headwear": "Chapéus e Bonés",
       "top": "Parte de Cima",
       "bottom": "Parte de Baixo",
       "fullBody": "Corpo Inteiro",

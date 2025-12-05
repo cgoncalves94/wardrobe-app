@@ -3,25 +3,9 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/ui/sonner';
-import { Trash2, Loader2, Shirt, RectangleVertical, PersonStanding, Footprints, Watch, LucideIcon } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
+import { ROOT_CONFIG, getRootIcon, getRootTranslationKey } from '@/lib/categories';
 import type { CategoryRow } from '@/types';
-
-// key = translation key, dbValue = value stored in database
-const ROOT_CONFIG: { key: string; dbValue: string; icon: LucideIcon }[] = [
-  { key: 'top', dbValue: 'Top', icon: Shirt },
-  { key: 'bottom', dbValue: 'Bottom', icon: RectangleVertical },
-  { key: 'fullBody', dbValue: 'Full Body', icon: PersonStanding },
-  { key: 'footwear', dbValue: 'Footwear', icon: Footprints },
-  { key: 'accessories', dbValue: 'Accessories', icon: Watch },
-];
-
-function getRootIcon(root: string): LucideIcon {
-  return ROOT_CONFIG.find(r => r.dbValue === root)?.icon || Shirt;
-}
-
-function getRootTranslationKey(root: string): string {
-  return ROOT_CONFIG.find(r => r.dbValue === root)?.key || 'top';
-}
 
 export default function CategoriesPage() {
   const [cats, setCats] = useState<CategoryRow[]>([]);
