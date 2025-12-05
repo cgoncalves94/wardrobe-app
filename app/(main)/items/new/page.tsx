@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -8,6 +8,7 @@ import ImageUploader from '@/components/ImageUploader';
 import { toast } from '@/components/ui/sonner';
 import { ArrowLeft, Loader2, ChevronDown, Check } from 'lucide-react';
 import { ROOT_CONFIG } from '@/lib/categories';
+import { useClickOutside } from '@/hooks/use-click-outside';
 
 export default function NewItemPage() {
   const [name, setName] = useState('');
@@ -17,23 +18,13 @@ export default function NewItemPage() {
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useClickOutside<HTMLDivElement>(
+    () => setDropdownOpen(false),
+    dropdownOpen
+  );
   const supabase = createClient();
   const router = useRouter();
   const t = useTranslations();
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
-    }
-    if (dropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [dropdownOpen]);
 
   useEffect(() => {
     (async () => {

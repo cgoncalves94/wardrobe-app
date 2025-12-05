@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Star, Trash2, X } from "lucide-react";
+import { Plus, Star, Trash2, Wand2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
+import CategoryDropdown from "@/components/CategoryDropdown";
+import type { CategoryRoot } from "@/lib/categories";
 
 export type GalleryItem = {
   id: string;
@@ -21,6 +23,7 @@ export type GalleryItem = {
 export type GalleryCategory = {
   id: string;
   name: string;
+  root: CategoryRoot;
 };
 
 type Props = {
@@ -45,7 +48,7 @@ export default function ItemsGallery({
   const t = useTranslations();
   const format = useFormatter();
 
-  // Close with Escape
+  // Close lightbox with Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -60,6 +63,7 @@ export default function ItemsGallery({
   const setCategory = (id: string | null) => {
     if (onSelectCategory) onSelectCategory(id);
     setSelectedCategoryId(id);
+    setShowFavoritesOnly(false);
   };
 
   const filteredItems = useMemo(() => {
@@ -149,17 +153,26 @@ export default function ItemsGallery({
       {/* Header */}
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold">{t('items.title')}</h2>
-        <Link
-          href="/items/new"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" />
-          {t('items.addItem')}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/outfits/generate"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:bg-secondary transition-colors font-medium"
+          >
+            <Wand2 className="w-4 h-4" />
+            {t('outfits.createOutfit')}
+          </Link>
+          <Link
+            href="/items/new"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            {t('items.addItem')}
+          </Link>
+        </div>
       </div>
 
       {/* Filter chips */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => {
@@ -189,24 +202,18 @@ export default function ItemsGallery({
           <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
           {t('common.favorites')}
         </button>
-        <div className="w-px h-8 bg-border mx-1" />
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => {
-              setCategory(c.id);
-              setShowFavoritesOnly(false);
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              selectedCategoryId === c.id && !showFavoritesOnly
-                ? "bg-foreground text-background"
-                : "bg-secondary text-foreground hover:bg-secondary/80"
-            }`}
-          >
-            {c.name}
-          </button>
-        ))}
+
+        {/* Category dropdown */}
+        {categories.length > 0 && (
+          <>
+            <div className="w-px h-8 bg-border mx-1" />
+            <CategoryDropdown
+              categories={categories}
+              selectedId={showFavoritesOnly ? null : selectedCategoryId}
+              onSelect={setCategory}
+            />
+          </>
+        )}
       </div>
 
       {/* Grid */}

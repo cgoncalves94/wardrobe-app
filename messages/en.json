@@ -13,7 +13,8 @@
     "noImage": "No image",
     "uncategorized": "Uncategorized",
     "added": "Added",
-    "backToHome": "Back to Home"
+    "backToHome": "Back to Home",
+    "clearFilter": "Clear filter"
   },
   "nav": {
     "home": "Home",
@@ -81,7 +82,8 @@
     "noItemsCategory": "No items in this category yet.",
     "noFavoriteItems": "No favorite items yet. Star some items to see them here!",
     "failedToUpdateFavorite": "Failed to update favorite",
-    "deleteConfirm": "Delete \"{name}\"?"
+    "deleteConfirm": "Delete \"{name}\"?",
+    "filterByCategory": "Filter by category"
   },
   "outfits": {
     "title": "Outfits",

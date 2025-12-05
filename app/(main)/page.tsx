@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Shirt, Wand2, FolderOpen, Plus, ArrowRight } from "lucide-react";
+import { Sparkles, Shirt, Wand2, Plus, ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getUserSubscription } from "@/lib/supabase/subscription";
 import { isProRoute } from "@/lib/features";
@@ -11,32 +11,6 @@ export default async function Home() {
   const tCommon = await getTranslations("common");
   const tPro = await getTranslations("pro");
   const subscription = await getUserSubscription();
-
-  const quickActions: {
-    href: string;
-    icon: typeof Wand2;
-    title: string;
-    description: string;
-  }[] = [
-    {
-      href: "/items",
-      icon: Shirt,
-      title: t("myWardrobe"),
-      description: t("myWardrobeDescription"),
-    },
-    {
-      href: "/items/new",
-      icon: Plus,
-      title: tNav("addItem"),
-      description: t("uploadClothes"),
-    },
-    {
-      href: "/categories",
-      icon: FolderOpen,
-      title: tNav("categories"),
-      description: t("organizeItems"),
-    },
-  ];
 
   return (
     <div className="space-y-12">
@@ -80,27 +54,6 @@ export default async function Home() {
               <Sparkles className="w-16 h-16 text-muted-foreground/40" />
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Quick Actions */}
-      <section>
-        <h2 className="text-xl font-semibold mb-6">{t("quickActions")}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((item) => (
-            <Link key={item.href} href={item.href} className="group">
-              <div className="h-full p-6 rounded-xl border border-border bg-card hover:border-foreground/20 hover:bg-secondary/50 transition-all duration-300 relative">
-                {isProRoute(item.href) && !subscription?.isPro && (
-                  <ProBadge label={tPro("badge")} />
-                )}
-                <div className="w-12 h-12 rounded-xl mb-4 flex items-center justify-center bg-secondary transition-transform group-hover:scale-105">
-                  <item.icon className="w-6 h-6 text-foreground/70" />
-                </div>
-                <h3 className="font-medium mb-1">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
-              </div>
-            </Link>
-          ))}
         </div>
       </section>
 

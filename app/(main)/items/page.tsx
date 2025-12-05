@@ -32,7 +32,7 @@ async function getCategories(userId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('categories')
-    .select('id,name')
+    .select('id,name,root')
     .eq('user_id', userId)
     .order('name');
   if (error) throw error;

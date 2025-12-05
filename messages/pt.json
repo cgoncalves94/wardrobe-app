@@ -13,7 +13,8 @@
     "noImage": "Sem imagem",
     "uncategorized": "Sem categoria",
     "added": "Adicionado",
-    "backToHome": "Voltar ao Início"
+    "backToHome": "Voltar ao Início",
+    "clearFilter": "Limpar filtro"
   },
   "nav": {
     "home": "Início",
@@ -81,7 +82,8 @@
     "noItemsCategory": "Nenhuma peça nesta categoria ainda.",
     "noFavoriteItems": "Nenhuma peça favorita ainda. Marque algumas para vê-las aqui!",
     "failedToUpdateFavorite": "Falha ao atualizar favorito",
-    "deleteConfirm": "Excluir \"{name}\"?"
+    "deleteConfirm": "Excluir \"{name}\"?",
+    "filterByCategory": "Filtrar por categoria"
   },
   "outfits": {
     "title": "Looks",

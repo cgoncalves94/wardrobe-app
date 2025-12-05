@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -8,6 +8,7 @@ import { Settings, LogOut } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import LogoutButton from "@/components/auth/LogoutButton";
 import { useLogout } from "@/hooks/use-logout";
+import { useClickOutside } from "@/hooks/use-click-outside";
 import type { Locale } from "@/i18n/config";
 
 type Props = {
@@ -16,7 +17,10 @@ type Props = {
 
 export default function Header({ currentLocale }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useClickOutside<HTMLDivElement>(
+    () => setSettingsOpen(false),
+    settingsOpen
+  );
   const pathname = usePathname();
   const t = useTranslations();
   const handleLogout = useLogout();
@@ -24,19 +28,6 @@ export default function Header({ currentLocale }: Props) {
   // Check if a nav link is active (exact match for home, startsWith for others)
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false);
-      }
-    }
-    if (settingsOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [settingsOpen]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-sm">
@@ -103,13 +94,7 @@ export default function Header({ currentLocale }: Props) {
           >
             {t("nav.categories")}
           </Link>
-          <Link
-            href="/items/new"
-            className="ml-3 px-4 py-2 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            {t("nav.addItem")}
-          </Link>
-          <div className="ml-4 pl-4 border-l border-border/50 flex items-center gap-3">
+          <div className="ml-3 pl-3 border-l border-border/50 flex items-center gap-3">
             <LanguageSwitcher currentLocale={currentLocale} />
             <LogoutButton />
           </div>
