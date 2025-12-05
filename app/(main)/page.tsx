@@ -19,12 +19,6 @@ export default async function Home() {
     description: string;
   }[] = [
     {
-      href: "/outfits/generate",
-      icon: Wand2,
-      title: t("aiOutfit"),
-      description: t("aiOutfitDescription"),
-    },
-    {
       href: "/items",
       icon: Shirt,
       title: t("myWardrobe"),
@@ -157,9 +151,10 @@ export default async function Home() {
             </p>
             <Link
               href="/outfits/try-on"
-              className="inline-flex items-center gap-1 text-sm font-medium text-muted-foreground"
+              className="inline-flex items-center gap-1 text-sm font-medium hover:gap-2 transition-all"
             >
-              {tCommon("comingSoon")}
+              {tCommon("tryItNow")}
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>

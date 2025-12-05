@@ -18,12 +18,16 @@ import {
   Loader2,
   ChevronDown,
   Check,
+  Shirt,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
-import { ROOT_CONFIG, getRootIcon } from "@/lib/categories";
+import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
 import { OUTFIT_STYLES, OutfitStyle, MANNEQUIN_GENDERS, MannequinGender } from "@/lib/gemini/types";
 import { isProRoute } from "@/lib/features";
+
+type TabType = "fromItems" | "aiPicks";
 
 type Item = {
   id: string;
@@ -37,7 +41,10 @@ export default function GenerateOutfitPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Selected items
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabType>("fromItems");
+
+  // Selected items (for "From Items" tab)
   const [selectedHeadwear, setSelectedHeadwear] = useState<Item | null>(null);
   const [selectedTop, setSelectedTop] = useState<Item | null>(null);
   const [selectedBottom, setSelectedBottom] = useState<Item | null>(null);
@@ -48,8 +55,11 @@ export default function GenerateOutfitPage() {
   // Expanded sections
   const [expandedSection, setExpandedSection] = useState<string | null>("top");
 
-  // Generation state
+  // AI Picks state (for "AI Picks" tab)
+  const [occasion, setOccasion] = useState("");
   const [style, setStyle] = useState<OutfitStyle>("casual");
+
+  // Shared generation state
   const [useMannequin, setUseMannequin] = useState(false);
   const [mannequinGender, setMannequinGender] = useState<MannequinGender>("female");
   const [generating, setGenerating] = useState(false);
@@ -118,28 +128,47 @@ export default function GenerateOutfitPage() {
   const selectedCount = [selectedHeadwear, selectedTop, selectedBottom, selectedFullBody, selectedFootwear].filter(Boolean).length + selectedAccessories.length;
 
   async function handleGenerate() {
-    if (!hasSelection) {
-      toast.error(t("outfits.selectAtLeastOne"));
-      return;
+    // Validate based on active tab
+    if (activeTab === "fromItems") {
+      if (!hasSelection) {
+        toast.error(t("outfits.selectAtLeastOne"));
+        return;
+      }
+    } else {
+      // AI Picks tab - need occasion
+      if (!occasion.trim()) {
+        toast.error(t("outfits.enterOccasion"));
+        return;
+      }
     }
 
     setGenerating(true);
     setGeneratedImage(null);
 
     try {
+      const body = activeTab === "fromItems"
+        ? {
+            // From Items mode - specific items, no style
+            topItemId: selectedTop?.id,
+            bottomItemId: selectedBottom?.id,
+            fullBodyItemId: selectedFullBody?.id,
+            footwearItemId: selectedFootwear?.id,
+            accessoryIds: selectedAccessories.map((a) => a.id),
+            useMannequin,
+            mannequinGender,
+          }
+        : {
+            // AI Picks mode - text-to-image with occasion + style
+            occasion: occasion.trim(),
+            style,
+            useMannequin,
+            mannequinGender,
+          };
+
       const response = await fetch("/api/ai/generate-outfit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topItemId: selectedTop?.id,
-          bottomItemId: selectedBottom?.id,
-          fullBodyItemId: selectedFullBody?.id,
-          footwearItemId: selectedFootwear?.id,
-          accessoryIds: selectedAccessories.map((a) => a.id),
-          style,
-          useMannequin,
-          mannequinGender,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
@@ -177,6 +206,7 @@ export default function GenerateOutfitPage() {
         generated_image_url: generatedImage,
         is_favorite: false,
         user_id: userId,
+        type: "outfit", // Regular outfit generation (not a try-on)
       });
 
       if (error) throw error;
@@ -318,18 +348,58 @@ export default function GenerateOutfitPage() {
 
   // Header component to avoid duplication
   const header = (
-    <div className="flex items-center gap-4 mb-6">
-      <Link
-        href="/outfits"
-        className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </Link>
-      <div>
-        <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
-        <p className="text-muted-foreground text-sm">
-          {t("outfits.selectItemsDescription")}
-        </p>
+    <div className="mb-6">
+      <div className="flex items-center gap-4 mb-4">
+        <Link
+          href="/outfits"
+          className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </Link>
+        <div>
+          <h1 className="text-xl font-semibold">{t("outfits.createOutfit")}</h1>
+          <p className="text-muted-foreground text-sm">
+            {activeTab === "fromItems"
+              ? t("outfits.selectItemsDescription")
+              : t("outfits.aiPicksDescription")}
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-secondary rounded-lg w-fit">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("fromItems");
+            setGeneratedImage(null);
+            setOutfitName("");
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            activeTab === "fromItems"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Shirt className="w-4 h-4" />
+          {t("outfits.tabs.fromItems")}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("aiPicks");
+            setGeneratedImage(null);
+            setOutfitName("");
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            activeTab === "aiPicks"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <MessageSquare className="w-4 h-4" />
+          {t("outfits.tabs.aiPicks")}
+        </button>
       </div>
     </div>
   );
@@ -351,80 +421,141 @@ export default function GenerateOutfitPage() {
       <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
         {/* Left: Selection Panel - fills available space */}
         <div className="flex-1 space-y-4">
-          {/* Style Selection - Compact */}
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-muted-foreground" />
-              {t("outfits.style")}
-            </h3>
-            <div className="flex flex-wrap gap-1.5">
-              {OUTFIT_STYLES.map((s) => {
-                const styleLabels: Record<string, string> = {
-                  casual: t("outfits.styles.casual"),
-                  formal: t("outfits.styles.formal"),
-                  "date-night": t("outfits.styles.dateNight"),
-                  work: t("outfits.styles.work"),
-                  street: t("outfits.styles.street"),
-                  cozy: t("outfits.styles.cozy"),
-                  elegant: t("outfits.styles.elegant"),
-                };
-                return (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setStyle(s.value)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      style === s.value
-                        ? "bg-foreground text-background"
-                        : "bg-secondary text-foreground hover:bg-secondary/80"
-                    }`}
-                  >
-                    {s.emoji} {styleLabels[s.value]}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Mannequin Option */}
-            <div className="mt-4 pt-4 border-t border-border">
-              <label className="flex items-center gap-3 cursor-pointer">
+          {/* AI Picks Tab Content */}
+          {activeTab === "aiPicks" && (
+            <div className="p-4 rounded-xl border border-border bg-card space-y-4">
+              {/* Occasion Input */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                  {t("outfits.occasionLabel")}
+                </h3>
                 <input
-                  type="checkbox"
-                  checked={useMannequin}
-                  onChange={(e) => setUseMannequin(e.target.checked)}
-                  className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
+                  type="text"
+                  value={occasion}
+                  onChange={(e) => setOccasion(e.target.value)}
+                  placeholder={t("outfits.occasionPlaceholder")}
+                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
                 />
-                <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
-              </label>
+              </div>
 
-              {useMannequin && (
-                <div className="mt-3 flex gap-1.5">
-                  {MANNEQUIN_GENDERS.map((g) => {
-                    const genderLabels: Record<string, string> = {
-                      female: t("outfits.genders.female"),
-                      male: t("outfits.genders.male"),
+              {/* Style Selection */}
+              <div>
+                <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-muted-foreground" />
+                  {t("outfits.style")}
+                </h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {OUTFIT_STYLES.map((s) => {
+                    const styleLabels: Record<string, string> = {
+                      casual: t("outfits.styles.casual"),
+                      formal: t("outfits.styles.formal"),
+                      "date-night": t("outfits.styles.dateNight"),
+                      work: t("outfits.styles.work"),
+                      street: t("outfits.styles.street"),
+                      cozy: t("outfits.styles.cozy"),
+                      elegant: t("outfits.styles.elegant"),
                     };
                     return (
                       <button
-                        key={g.value}
+                        key={s.value}
                         type="button"
-                        onClick={() => setMannequinGender(g.value)}
+                        onClick={() => setStyle(s.value)}
                         className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                          mannequinGender === g.value
+                          style === s.value
                             ? "bg-foreground text-background"
                             : "bg-secondary text-foreground hover:bg-secondary/80"
                         }`}
                       >
-                        {g.emoji} {genderLabels[g.value]}
+                        {s.emoji} {styleLabels[s.value]}
                       </button>
                     );
                   })}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Item Selectors - Accordion style */}
+              {/* Mannequin Option */}
+              <div className="pt-4 border-t border-border">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useMannequin}
+                    onChange={(e) => setUseMannequin(e.target.checked)}
+                    className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
+                  />
+                  <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
+                </label>
+
+                {useMannequin && (
+                  <div className="mt-3 flex gap-1.5">
+                    {MANNEQUIN_GENDERS.map((g) => {
+                      const genderLabels: Record<string, string> = {
+                        female: t("outfits.genders.female"),
+                        male: t("outfits.genders.male"),
+                      };
+                      return (
+                        <button
+                          key={g.value}
+                          type="button"
+                          onClick={() => setMannequinGender(g.value)}
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                            mannequinGender === g.value
+                              ? "bg-foreground text-background"
+                              : "bg-secondary text-foreground hover:bg-secondary/80"
+                          }`}
+                        >
+                          {g.emoji} {genderLabels[g.value]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* From Items Tab Content */}
+          {activeTab === "fromItems" && (
+            <>
+              {/* Mannequin Option - Compact */}
+              <div className="p-4 rounded-xl border border-border bg-card">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useMannequin}
+                    onChange={(e) => setUseMannequin(e.target.checked)}
+                    className="w-4 h-4 rounded border-border bg-secondary accent-foreground"
+                  />
+                  <span className="text-sm">{t("outfits.displayOnMannequin")}</span>
+                </label>
+
+                {useMannequin && (
+                  <div className="mt-3 flex gap-1.5">
+                    {MANNEQUIN_GENDERS.map((g) => {
+                      const genderLabels: Record<string, string> = {
+                        female: t("outfits.genders.female"),
+                        male: t("outfits.genders.male"),
+                      };
+                      return (
+                        <button
+                          key={g.value}
+                          type="button"
+                          onClick={() => setMannequinGender(g.value)}
+                          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                            mannequinGender === g.value
+                              ? "bg-foreground text-background"
+                              : "bg-secondary text-foreground hover:bg-secondary/80"
+                          }`}
+                        >
+                          {g.emoji} {genderLabels[g.value]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Item Selectors - Accordion style */}
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <h3 className="text-sm font-medium p-4 pb-3 border-b border-border">
               {t("outfits.selectItems")}
@@ -570,12 +701,14 @@ export default function GenerateOutfitPage() {
               })()}
             </div>
           </div>
+            </>
+          )}
 
-          {/* Generate Button */}
+          {/* Generate Button - Shared across tabs */}
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={generating || !hasSelection}
+            disabled={generating || (activeTab === "fromItems" ? !hasSelection : !occasion.trim())}
             className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {generating ? (
@@ -630,9 +763,9 @@ export default function GenerateOutfitPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground p-4">
                   <Wand2 className="w-8 h-8" />
                   <p className="text-center text-sm">
-                    {hasSelection
-                      ? t("outfits.clickGenerate")
-                      : t("outfits.selectItemsToStart")}
+                    {activeTab === "fromItems"
+                      ? (hasSelection ? t("outfits.clickGenerate") : t("outfits.selectItemsToStart"))
+                      : (occasion.trim() ? t("outfits.clickGenerate") : t("outfits.enterOccasionToStart"))}
                   </p>
                 </div>
               )}

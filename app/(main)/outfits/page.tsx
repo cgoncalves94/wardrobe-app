@@ -9,16 +9,17 @@ import ProBadge from "@/components/ProBadge";
 
 export const revalidate = 0;
 
-async function getOutfits(userId: string) {
+async function getOutfitsByType(userId: string, type: "outfit" | "tryon") {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("outfits")
     .select("*")
     .eq("user_id", userId)
+    .eq("type", type)
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching outfits:", error);
+    console.error(`Error fetching ${type}s:`, error);
     return [];
   }
   return data || [];
@@ -34,7 +35,11 @@ export default async function OutfitsPage() {
     return <div className="text-center py-12 text-muted-foreground">{t('auth.loginRequired', { resource: t('nav.outfits').toLowerCase() })}</div>;
   }
 
-  const outfits = await getOutfits(user.id);
+  // Fetch outfits and try-ons in parallel
+  const [outfits, tryons] = await Promise.all([
+    getOutfitsByType(user.id, "outfit"),
+    getOutfitsByType(user.id, "tryon"),
+  ]);
 
   return (
     <div className="space-y-10">
@@ -94,10 +99,9 @@ export default async function OutfitsPage() {
         </Link>
       </div>
 
-      {/* Saved Outfits */}
+      {/* Saved Outfits & Try-Ons */}
       <div>
-        <h2 className="text-lg font-semibold mb-5">{t('outfits.savedOutfits')}</h2>
-        <OutfitsGallery outfits={outfits} />
+        <OutfitsGallery outfits={outfits} tryons={tryons} />
       </div>
     </div>
   );

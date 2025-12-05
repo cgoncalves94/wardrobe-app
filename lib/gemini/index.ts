@@ -59,7 +59,6 @@ interface GenerateOutfitOptions {
   fullBodyImageBase64?: string;
   footwearImageBase64?: string;
   accessoryImagesBase64?: string[];
-  style?: OutfitStyle;
   additionalPrompt?: string;
   useMannequin?: boolean;
   mannequinGender?: MannequinGender;
@@ -78,7 +77,7 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   imageBase64: string;
   prompt: string;
 }> {
-  const { topImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, style = "casual", additionalPrompt, useMannequin = false, mannequinGender = "female" } = options;
+  const { topImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, additionalPrompt, useMannequin = false, mannequinGender = "female" } = options;
 
   // Build the content parts
   const parts: any[] = [];
@@ -131,17 +130,6 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
     }
   }
 
-  // Build the prompt with explicit item descriptions
-  const styleDescriptions: Record<OutfitStyle, string> = {
-    casual: "relaxed, everyday look with comfortable vibes",
-    formal: "sophisticated, polished, professional appearance",
-    "date-night": "romantic, attractive, perfect for a special evening",
-    work: "professional yet stylish office appropriate look",
-    street: "trendy urban fashion with cool streetwear aesthetics",
-    cozy: "warm, comfortable, soft and inviting",
-    elegant: "luxurious, refined, high-fashion appearance",
-  };
-
   // Build dynamic description of what items were actually provided
   const providedItems: string[] = [];
   if (topImageBase64) providedItems.push("top/shirt");
@@ -175,7 +163,6 @@ CRITICAL RULES:
 - Use ONLY the exact ${itemCount} clothing items I provided - nothing more
 - If no shoes were provided, mannequin has bare feet or cropped at ankles
 - If no accessories were provided, show zero accessories
-- The outfit style should feel ${styleDescriptions[style]}
 - Standard retail mannequin - NO human features, NO face, NO skin texture
 ${additionalPrompt ? `\nAdditional notes: ${additionalPrompt}` : ""}
 
@@ -203,7 +190,6 @@ CRITICAL RULES:
 - If no shoes were provided, do NOT add any footwear
 - If no accessories were provided, show zero accessories
 - Clean white/light gray background, no props or decorations
-- The outfit style should feel ${styleDescriptions[style]}
 ${additionalPrompt ? `\nAdditional notes: ${additionalPrompt}` : ""}
 
 Remember: This is a FLAT-LAY photo where clothes are laid separately on a surface, NOT styled on an invisible mannequin or body form.`;
@@ -227,6 +213,119 @@ Remember: This is a FLAT-LAY photo where clothes are laid separately on a surfac
 
   if (!imagePart?.inlineData?.data) {
     throw new Error("Failed to generate outfit image");
+  }
+
+  return {
+    imageBase64: imagePart.inlineData.data,
+    prompt,
+  };
+}
+
+interface GenerateFromPromptOptions {
+  occasion: string;
+  style: OutfitStyle;
+  useMannequin?: boolean;
+  mannequinGender?: MannequinGender;
+}
+
+/**
+ * Generate an outfit image from text prompt (AI Picks mode)
+ * Pure text-to-image generation without wardrobe items
+ */
+export async function generateOutfitFromPrompt(options: GenerateFromPromptOptions): Promise<{
+  imageBase64: string;
+  prompt: string;
+}> {
+  const { occasion, style, useMannequin = false, mannequinGender = "female" } = options;
+
+  const styleDescriptions: Record<OutfitStyle, string> = {
+    casual: "relaxed, everyday look with comfortable vibes",
+    formal: "sophisticated, polished, professional appearance",
+    "date-night": "romantic, attractive, perfect for a special evening",
+    work: "professional yet stylish office appropriate look",
+    street: "trendy urban fashion with cool streetwear aesthetics",
+    cozy: "warm, comfortable, soft and inviting",
+    elegant: "luxurious, refined, high-fashion appearance",
+  };
+
+  // Build prompt based on display mode (flat-lay vs mannequin)
+  const prompt = useMannequin
+    ? `Generate a professional fashion product photograph showing a complete outfit on a ${mannequinGender} mannequin.
+
+OCCASION: ${occasion}
+STYLE: ${styleDescriptions[style]}
+
+PHOTOGRAPHY STYLE:
+- Full-body ${mannequinGender} mannequin (headless, standard retail display style)
+- Clean white/light gray studio background
+- Front-facing view, straight-on camera angle
+- Professional fashion retail photography aesthetic
+- Soft, even studio lighting with minimal shadows
+- The mannequin should be a neutral gray or white color
+
+MANNEQUIN DISPLAY:
+- Complete coordinated outfit naturally draped and fitted on the mannequin
+- Show how the outfit would look when worn together
+- Mannequin in neutral standing pose
+- Full body shot showing all garments from shoulders to feet
+
+OUTFIT REQUIREMENTS:
+- Create a stylish, cohesive outfit appropriate for: ${occasion}
+- The overall aesthetic should be ${styleDescriptions[style]}
+- Include appropriate clothing items: top, bottom (or dress), footwear
+- Add accessories if suitable for the occasion
+- Standard retail mannequin - NO human features, NO face, NO skin texture
+
+Generate a single high-quality fashion photograph.`
+
+    : `Generate a professional top-down flat-lay fashion photograph showing a complete outfit.
+
+OCCASION: ${occasion}
+STYLE: ${styleDescriptions[style]}
+
+PHOTOGRAPHY STYLE:
+- Camera angle: Directly overhead, bird's eye view looking straight down
+- Each garment laid FLAT and SEPARATELY on a clean white marble surface
+- Items should NOT overlap or be arranged as if worn on a body/mannequin
+- Space between each item (2-3 inches gap)
+- Garments neatly folded or spread flat showing their full shape
+- Soft natural window light from the left, creating gentle shadows
+- Magazine editorial flat-lay aesthetic, like a fashion blogger's Instagram post
+
+ARRANGEMENT:
+- Top garments placed in upper portion of frame
+- Bottom garments (pants/skirts) placed below with clear separation
+- Shoes placed at the bottom
+- Accessories arranged around the main pieces
+
+OUTFIT REQUIREMENTS:
+- Create a stylish, cohesive outfit appropriate for: ${occasion}
+- The overall aesthetic should be ${styleDescriptions[style]}
+- Include appropriate clothing items: top, bottom (or dress), footwear
+- Add accessories if suitable for the occasion
+- Clean white/light gray background, no props or decorations
+
+Generate a single high-quality fashion photograph.`;
+
+  const parts: any[] = [{ text: prompt }];
+
+  // Call Gemini API with retry logic for rate limits
+  const response = await withRetry(() =>
+    ai.models.generateContent({
+      model: "gemini-2.5-flash-image",
+      contents: [{ role: "user", parts }],
+      config: {
+        responseModalities: ["TEXT", "IMAGE"],
+      },
+    })
+  );
+
+  // Extract image from response
+  const responseParts = response.candidates?.[0]?.content?.parts || [];
+  const imagePart = responseParts.find((p: any) => p.inlineData);
+
+  if (!imagePart?.inlineData?.data) {
+    throw new Error("Failed to generate outfit image from prompt");
   }
 
   return {
@@ -266,27 +365,24 @@ export async function generateTryOnImage(options: TryOnOptions): Promise<{
     }
   }
 
-  const prompt = `Create a realistic fashion photograph showing the person in the first image wearing the outfit shown in the subsequent images.
+  const prompt = `Change the outfit on this person to match the clothing shown in the reference image(s).
 
-Outfit description: ${outfitDescription}
+Keep the person's face, hair, body, pose, and background EXACTLY the same - only change their clothes.
 
-Requirements:
-- Keep the person's face, body shape, and features exactly as they appear in the reference photo
-- Realistically fit the clothing to the person's body
-- Maintain natural lighting and shadows
-- The result should look like a real photograph, not a composite
-- Professional fashion photography quality
-- Full body or 3/4 shot showing the complete outfit
-- The clothing should drape and fit naturally on the person
+Outfit to apply: ${outfitDescription}
 
-Generate a single photorealistic image of the person wearing the described outfit.`;
+Important:
+- Same person, same pose, same location - just different clothes
+- Include ALL items from the outfit: dress/top, bottom, shoes, hat, belt, bag, jewelry if visible
+- Match the lighting on the new clothes to the scene
+- Natural, realistic result - clothes should look worn, not pasted`;
 
   parts.push({ text: prompt });
 
   // Call Gemini API with retry logic for rate limits
   const response = await withRetry(() =>
     ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3-pro-image-preview",
       contents: [{ role: "user", parts }],
       config: {
         responseModalities: ["TEXT", "IMAGE"],

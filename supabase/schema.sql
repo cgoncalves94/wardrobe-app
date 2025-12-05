@@ -25,13 +25,14 @@ CREATE TABLE IF NOT EXISTS items (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Outfits table (AI-generated outfit compositions)
+-- Outfits table (AI-generated outfit compositions and virtual try-ons)
 CREATE TABLE IF NOT EXISTS outfits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   generated_image_url TEXT NOT NULL,
   is_favorite BOOLEAN DEFAULT false,
+  type TEXT DEFAULT 'outfit' CHECK (type IN ('outfit', 'tryon')),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -91,6 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_categories_root ON categories(root);
 CREATE INDEX IF NOT EXISTS idx_items_user_id ON items(user_id);
 CREATE INDEX IF NOT EXISTS idx_items_category_id ON items(category_id);
 CREATE INDEX IF NOT EXISTS idx_outfits_user_id ON outfits(user_id);
+CREATE INDEX IF NOT EXISTS idx_outfits_type ON outfits(type);
 
 -- ============================================
 -- 4. STORAGE BUCKET & POLICIES

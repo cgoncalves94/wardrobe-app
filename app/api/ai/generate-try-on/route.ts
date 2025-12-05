@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateOutfitImage, generateOutfitFromPrompt, OutfitStyle, MannequinGender } from "@/lib/gemini";
+import { generateTryOnImage } from "@/lib/gemini";
 import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
 
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check Pro subscription (only if feature is Pro-gated)
-    if (isProRoute("/outfits/generate")) {
+    if (isProRoute("/outfits/try-on")) {
       const userIsPro = await isProUser();
       if (!userIsPro) {
         return NextResponse.json(
@@ -26,42 +26,34 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { topItemId, bottomItemId, fullBodyItemId, footwearItemId, accessoryIds, occasion, style, additionalPrompt, useMannequin, mannequinGender } = body;
+    const { userPhotoBase64, itemIds, outfitDescription, outfitImageUrl } = body;
 
-    let result: { imageBase64: string; prompt: string };
+    // Validate user photo
+    if (!userPhotoBase64) {
+      return NextResponse.json({ error: "User photo is required" }, { status: 400 });
+    }
 
-    // Detect mode: AI Picks (has occasion) vs From Items (has item IDs)
-    if (occasion) {
-      // AI Picks mode - pure text-to-image generation
-      if (!style) {
-        return NextResponse.json({ error: "Style is required for AI-generated outfits" }, { status: 400 });
-      }
+    // Validate that we have either itemIds OR outfitImageUrl
+    if ((!itemIds || itemIds.length === 0) && !outfitImageUrl) {
+      return NextResponse.json({ error: "At least one clothing item or outfit is required" }, { status: 400 });
+    }
 
-      result = await generateOutfitFromPrompt({
-        occasion,
-        style: style as OutfitStyle,
-        useMannequin,
-        mannequinGender: mannequinGender as MannequinGender,
-      });
-    } else {
-      // From Items mode - compose from wardrobe items
-      const itemIds = [topItemId, bottomItemId, fullBodyItemId, footwearItemId, ...(accessoryIds || [])].filter(Boolean);
+    const clothingImagesBase64: string[] = [];
+    let finalDescription = outfitDescription || "";
 
-      if (itemIds.length === 0) {
-        return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
-      }
-
+    // Mode 1: Using individual items
+    if (itemIds && itemIds.length > 0) {
+      // Fetch item images from database
       const { data: items, error: itemsError } = await supabase
         .from("items")
-        .select("id, image_url")
+        .select("id, name, image_url")
         .in("id", itemIds);
 
       if (itemsError) {
         return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });
       }
 
-      // Convert image URLs to base64
-      const imageMap: Record<string, string> = {};
+      const itemNames: string[] = [];
 
       for (const item of items || []) {
         if (item.image_url) {
@@ -69,7 +61,6 @@ export async function POST(request: NextRequest) {
             const response = await fetch(item.image_url);
             const contentType = response.headers.get("content-type") || "";
 
-            // Verify we got an actual image, not an error response
             if (!response.ok) {
               console.error(`Failed to fetch image for item ${item.id}: HTTP ${response.status}`);
               continue;
@@ -82,41 +73,66 @@ export async function POST(request: NextRequest) {
 
             const arrayBuffer = await response.arrayBuffer();
             const base64 = Buffer.from(arrayBuffer).toString("base64");
-            imageMap[item.id] = base64;
+            clothingImagesBase64.push(base64);
+            itemNames.push(item.name);
           } catch (e) {
             console.error(`Failed to fetch image for item ${item.id}:`, e);
           }
         }
       }
 
-      // Validate that we have at least one valid image
-      if (Object.keys(imageMap).length === 0) {
-        return NextResponse.json(
-          { error: "Could not load any item images. Please check your wardrobe items." },
-          { status: 400 }
-        );
+      // Build outfit description from item names if not provided
+      if (!finalDescription) {
+        finalDescription = itemNames.join(", ");
       }
-
-      // Generate outfit image from items (no style param - removed)
-      result = await generateOutfitImage({
-        topImageBase64: topItemId ? imageMap[topItemId] : undefined,
-        bottomImageBase64: bottomItemId ? imageMap[bottomItemId] : undefined,
-        fullBodyImageBase64: fullBodyItemId ? imageMap[fullBodyItemId] : undefined,
-        footwearImageBase64: footwearItemId ? imageMap[footwearItemId] : undefined,
-        accessoryImagesBase64: accessoryIds?.map((id: string) => imageMap[id]).filter(Boolean),
-        additionalPrompt,
-        useMannequin,
-        mannequinGender: mannequinGender as MannequinGender,
-      });
     }
 
+    // Mode 2: Using a saved outfit image
+    if (outfitImageUrl) {
+      try {
+        const response = await fetch(outfitImageUrl);
+        const contentType = response.headers.get("content-type") || "";
+
+        if (!response.ok) {
+          console.error(`Failed to fetch outfit image: HTTP ${response.status}`);
+          return NextResponse.json({ error: "Failed to fetch outfit image" }, { status: 400 });
+        }
+
+        if (!contentType.startsWith("image/")) {
+          console.error(`Invalid content type for outfit: ${contentType}`);
+          return NextResponse.json({ error: "Invalid outfit image format" }, { status: 400 });
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString("base64");
+        clothingImagesBase64.push(base64);
+      } catch (e) {
+        console.error("Failed to fetch outfit image:", e);
+        return NextResponse.json({ error: "Failed to load outfit image" }, { status: 400 });
+      }
+    }
+
+    if (clothingImagesBase64.length === 0) {
+      return NextResponse.json(
+        { error: "Could not load any clothing images. Please check your selection." },
+        { status: 400 }
+      );
+    }
+
+    // Generate try-on image
+    const result = await generateTryOnImage({
+      userPhotoBase64,
+      outfitDescription: finalDescription,
+      clothingImagesBase64,
+    });
+
     // Upload generated image to Supabase Storage
-    const fileName = `outfit-${Date.now()}.jpg`;
+    const fileName = `tryon-${Date.now()}.jpg`;
     const imageBuffer = Buffer.from(result.imageBase64, "base64");
 
     const { error: uploadError } = await supabase.storage
       .from("wardrobe")
-      .upload(`outfits/${fileName}`, imageBuffer, {
+      .upload(`tryons/${fileName}`, imageBuffer, {
         contentType: "image/jpeg",
         cacheControl: "3600",
       });
@@ -128,7 +144,7 @@ export async function POST(request: NextRequest) {
 
     const { data: urlData } = supabase.storage
       .from("wardrobe")
-      .getPublicUrl(`outfits/${fileName}`);
+      .getPublicUrl(`tryons/${fileName}`);
 
     return NextResponse.json({
       success: true,
@@ -138,9 +154,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Generate outfit error:", error);
+    console.error("Generate try-on error:", error);
 
-    const message = error instanceof Error ? error.message : "Failed to generate outfit";
+    const message = error instanceof Error ? error.message : "Failed to generate try-on";
     const errorWithStatus = error as { status?: number };
 
     // Handle rate limit errors

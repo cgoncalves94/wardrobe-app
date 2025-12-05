@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Sparkles, Star, Trash2, X } from "lucide-react";
+import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
@@ -16,23 +16,32 @@ export type Outfit = {
   created_at: string;
 };
 
+type TabType = "outfits" | "tryons";
+
 type Props = {
   outfits: Outfit[];
+  tryons?: Outfit[];
 };
 
-export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
+export default function OutfitsGallery({ outfits: initialOutfits, tryons: initialTryons = [] }: Props) {
   const [outfits, setOutfits] = useState<Outfit[]>(initialOutfits);
+  const [tryons, setTryons] = useState<Outfit[]>(initialTryons);
+  const [activeTab, setActiveTab] = useState<TabType>("outfits");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const filteredOutfits = useMemo(() => {
+  // Get active list based on tab
+  const activeList = activeTab === "outfits" ? outfits : tryons;
+  const setActiveList = activeTab === "outfits" ? setOutfits : setTryons;
+
+  const filteredItems = useMemo(() => {
     if (showFavoritesOnly) {
-      return outfits.filter((o) => o.is_favorite);
+      return activeList.filter((o) => o.is_favorite);
     }
-    return outfits;
-  }, [outfits, showFavoritesOnly]);
+    return activeList;
+  }, [activeList, showFavoritesOnly]);
 
   const supabase = createClient();
   const t = useTranslations();
@@ -78,10 +87,15 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
         }
       }
 
-      setOutfits((prev) => prev.filter((o) => o.id !== outfit.id));
+      // Remove from the correct list
+      if (activeTab === "outfits") {
+        setOutfits((prev) => prev.filter((o) => o.id !== outfit.id));
+      } else {
+        setTryons((prev) => prev.filter((o) => o.id !== outfit.id));
+      }
       setOpen(false);
       setSelectedOutfit(null);
-      toast.success(t('outfits.outfitDeleted'));
+      toast.success(activeTab === "outfits" ? t('outfits.outfitDeleted') : t('outfits.tryOn.tryOnDeleted'));
     } catch (error) {
       const message = error instanceof Error ? error.message : t('outfits.failedToDelete');
       toast.error(message);
@@ -93,12 +107,18 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
   async function toggleFavorite(outfit: Outfit) {
     const newValue = !outfit.is_favorite;
 
-    // Optimistic update
-    setOutfits((prev) =>
+    // Optimistic update - update the correct list
+    const updateList = (prev: Outfit[]) =>
       prev.map((o) =>
         o.id === outfit.id ? { ...o, is_favorite: newValue } : o
-      )
-    );
+      );
+
+    if (activeTab === "outfits") {
+      setOutfits(updateList);
+    } else {
+      setTryons(updateList);
+    }
+
     if (selectedOutfit?.id === outfit.id) {
       setSelectedOutfit({ ...selectedOutfit, is_favorite: newValue });
     }
@@ -112,16 +132,22 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
       if (error) throw error;
     } catch {
       // Revert on error
-      setOutfits((prev) =>
+      const revertList = (prev: Outfit[]) =>
         prev.map((o) =>
           o.id === outfit.id ? { ...o, is_favorite: !newValue } : o
-        )
-      );
+        );
+
+      if (activeTab === "outfits") {
+        setOutfits(revertList);
+      } else {
+        setTryons(revertList);
+      }
       toast.error(t('outfits.failedToUpdateFavorite'));
     }
   }
 
-  if (outfits.length === 0) {
+  // Empty state when both lists are empty
+  if (outfits.length === 0 && tryons.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
         <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">
@@ -143,36 +169,109 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Filter chips */}
-      <div className="flex flex-wrap gap-2">
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-secondary rounded-lg w-fit">
         <button
           type="button"
-          onClick={() => setShowFavoritesOnly(false)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-            !showFavoritesOnly
-              ? "bg-foreground text-background"
-              : "bg-secondary text-foreground hover:bg-secondary/80"
+          onClick={() => {
+            setActiveTab("outfits");
+            setShowFavoritesOnly(false);
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            activeTab === "outfits"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          {t('common.all')}
+          <Wand2 className="w-4 h-4" />
+          {t('outfits.tabOutfits')}
+          {outfits.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === "outfits" ? "bg-secondary" : "bg-background/50"
+            }`}>
+              {outfits.length}
+            </span>
+          )}
         </button>
         <button
           type="button"
-          onClick={() => setShowFavoritesOnly(true)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
-            showFavoritesOnly
-              ? "bg-foreground text-background"
-              : "bg-secondary text-foreground hover:bg-secondary/80"
+          onClick={() => {
+            setActiveTab("tryons");
+            setShowFavoritesOnly(false);
+          }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            activeTab === "tryons"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
-          {t('common.favorites')}
+          <Shirt className="w-4 h-4" />
+          {t('outfits.tabTryOns')}
+          {tryons.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === "tryons" ? "bg-secondary" : "bg-background/50"
+            }`}>
+              {tryons.length}
+            </span>
+          )}
         </button>
       </div>
 
-      {filteredOutfits.length > 0 ? (
+      {/* Filter chips */}
+      {activeList.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setShowFavoritesOnly(false)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              !showFavoritesOnly
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/80"
+            }`}
+          >
+            {t('common.all')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowFavoritesOnly(true)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
+              showFavoritesOnly
+                ? "bg-foreground text-background"
+                : "bg-secondary text-foreground hover:bg-secondary/80"
+            }`}
+          >
+            <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
+            {t('common.favorites')}
+          </button>
+        </div>
+      )}
+
+      {/* Content */}
+      {activeList.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">
+            {activeTab === "outfits" ? (
+              <Wand2 className="w-7 h-7 text-muted-foreground" />
+            ) : (
+              <Shirt className="w-7 h-7 text-muted-foreground" />
+            )}
+          </div>
+          <h3 className="font-medium text-lg mb-2">
+            {activeTab === "outfits" ? t('outfits.noOutfitsTitle') : t('outfits.noTryOnsTitle')}
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+            {activeTab === "outfits" ? t('outfits.noOutfitsDescription') : t('outfits.noTryOnsDescription')}
+          </p>
+          <Link
+            href={activeTab === "outfits" ? "/outfits/generate" : "/outfits/try-on"}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:bg-secondary transition-colors"
+          >
+            {activeTab === "outfits" ? t('outfits.createFirstOutfit') : t('outfits.createFirstTryOn')}
+          </Link>
+        </div>
+      ) : filteredItems.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredOutfits.map((outfit) => (
+          {filteredItems.map((outfit) => (
           <button
             key={outfit.id}
             type="button"
@@ -221,7 +320,7 @@ export default function OutfitsGallery({ outfits: initialOutfits }: Props) {
             <Star className="w-7 h-7 text-muted-foreground" />
           </div>
           <p className="text-muted-foreground">
-            {t('outfits.noFavoriteOutfits')}
+            {activeTab === "outfits" ? t('outfits.noFavoriteOutfits') : t('outfits.noFavoriteTryOns')}
           </p>
         </div>
       )}
