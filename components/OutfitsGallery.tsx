@@ -41,7 +41,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   const [deleting, setDeleting] = useState(false);
 
   const activeList = activeTab === "outfits" ? outfits : tryons;
-  const setActiveList = activeTab === "outfits" ? setOutfits : setTryons;
 
   const filteredItems = useMemo(() => {
     if (showFavoritesOnly) {

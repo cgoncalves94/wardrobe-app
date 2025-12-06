@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/ui/sonner';
 import { Trash2, Loader2, Plus, ChevronDown } from 'lucide-react';
-import { ROOT_CONFIG, getRootIcon } from '@/lib/categories';
+import { ROOT_CONFIG } from '@/lib/categories';
 import type { CategoryRow } from '@/types';
 
 /**
