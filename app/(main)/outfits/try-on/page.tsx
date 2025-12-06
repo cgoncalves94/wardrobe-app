@@ -186,21 +186,6 @@ export default function TryOnPage() {
     }
   }
 
-  // Build outfit description from selected items
-  function buildOutfitDescription(): string {
-    if (selectionMode === "outfits" && selectedOutfit) {
-      return selectedOutfit.name;
-    }
-    const parts: string[] = [];
-    if (selectedHeadwear) parts.push(selectedHeadwear.name);
-    if (selectedTop) parts.push(selectedTop.name);
-    if (selectedBottom) parts.push(selectedBottom.name);
-    if (selectedFullBody) parts.push(selectedFullBody.name);
-    if (selectedFootwear) parts.push(selectedFootwear.name);
-    selectedAccessories.forEach(a => parts.push(a.name));
-    return parts.join(", ");
-  }
-
   // Get all selected item IDs
   function getSelectedItemIds(): string[] {
     return allSelectedItems.map(item => item.id);
@@ -231,19 +216,19 @@ export default function TryOnPage() {
 
       // Build request body based on selection mode
       const requestBody: {
+        mode: SelectionMode;
         userPhotoBase64: string;
-        outfitDescription: string;
         itemIds?: string[];
-        outfitImageUrl?: string;
+        outfitId?: string;
       } = {
+        mode: selectionMode,
         userPhotoBase64,
-        outfitDescription: buildOutfitDescription(),
       };
 
       if (selectionMode === "items") {
         requestBody.itemIds = getSelectedItemIds();
       } else if (selectedOutfit) {
-        requestBody.outfitImageUrl = selectedOutfit.generated_image_url;
+        requestBody.outfitId = selectedOutfit.id;
       }
 
       const response = await fetch("/api/ai/generate-try-on", {

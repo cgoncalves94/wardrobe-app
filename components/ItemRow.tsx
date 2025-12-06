@@ -74,7 +74,7 @@ export default function ItemRow<T extends BaseItem>({
   };
 
   const validItems = items.filter((item) => item.image_url);
-if (validItems.length === 0) return null;
+  if (validItems.length === 0) return null;
 
   const handleSelect = (item: T) => {
     if (multiSelect && onMultiSelect) {
@@ -110,7 +110,7 @@ if (validItems.length === 0) return null;
           ref={scrollRef}
           className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory"
         >
-          {validItems.map((item) => {
+          {validItems.map((item, index) => {
             const isSelected = isItemSelected(item);
             return (
               <button
@@ -132,6 +132,7 @@ if (validItems.length === 0) return null;
                   fill
                   className="object-cover"
                   sizes="(max-width: 640px) 76px, (max-width: 1024px) 88px, 96px"
+                  priority={index === 0}
                 />
                 {isSelected && (
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center">

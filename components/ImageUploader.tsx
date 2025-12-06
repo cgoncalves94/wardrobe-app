@@ -67,18 +67,29 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, pr
     return (
       <div
         className={`relative rounded-xl overflow-hidden border border-border cursor-pointer group ${
-          preserveAspect ? "w-fit max-h-[320px]" : "aspect-square max-w-[280px]"
+          preserveAspect ? "max-w-[280px]" : "aspect-square max-w-[280px]"
         }`}
         onClick={() => inputRef.current?.click()}
       >
-        <Image
-          src={imageUrl}
-          alt="Preview"
-          {...(preserveAspect
-            ? { width: 280, height: 320, className: "object-contain max-h-[320px] w-auto" }
-            : { fill: true, className: "object-cover", sizes: "280px" }
-          )}
-        />
+        {preserveAspect ? (
+          <Image
+            src={imageUrl}
+            alt="Preview"
+            width={3}
+            height={4}
+            className="object-contain"
+            style={{ width: "100%", height: "auto" }}
+            sizes="(max-width: 640px) 80vw, 280px"
+          />
+        ) : (
+          <Image
+            src={imageUrl}
+            alt="Preview"
+            fill
+            className="object-cover"
+            sizes="280px"
+          />
+        )}
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
           <RefreshCw className="w-8 h-8 text-white" />
           <p className="text-sm text-white font-medium">Click to replace</p>

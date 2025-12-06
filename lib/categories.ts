@@ -16,6 +16,8 @@ export interface RootConfig {
   key: string;
   dbValue: CategoryRoot;
   icon: LucideIcon;
+  /** Description for AI prompts (what to replace on the person) */
+  promptDescription: string;
 }
 
 /**
@@ -23,12 +25,12 @@ export interface RootConfig {
  * key = translation key, dbValue = database value
  */
 export const ROOT_CONFIG: RootConfig[] = [
-  { key: "headwear", dbValue: "Headwear", icon: HardHat },
-  { key: "top", dbValue: "Top", icon: Shirt },
-  { key: "bottom", dbValue: "Bottom", icon: RectangleVertical },
-  { key: "fullBody", dbValue: "Full Body", icon: PersonStanding },
-  { key: "footwear", dbValue: "Footwear", icon: Footprints },
-  { key: "accessories", dbValue: "Accessories", icon: Watch },
+  { key: "headwear", dbValue: "Headwear", icon: HardHat, promptDescription: "headwear/hat" },
+  { key: "top", dbValue: "Top", icon: Shirt, promptDescription: "top/shirt" },
+  { key: "bottom", dbValue: "Bottom", icon: RectangleVertical, promptDescription: "bottom/pants/skirt" },
+  { key: "fullBody", dbValue: "Full Body", icon: PersonStanding, promptDescription: "full-body garment (dress/jumpsuit/romper)" },
+  { key: "footwear", dbValue: "Footwear", icon: Footprints, promptDescription: "footwear/shoes" },
+  { key: "accessories", dbValue: "Accessories", icon: Watch, promptDescription: "accessories" },
 ];
 
 /**
@@ -51,4 +53,12 @@ export function getRootTranslationKey(root: string): string {
     console.warn(`[Category] No translation key found for category root: "${root}"`);
   }
   return config?.key || "top";
+}
+
+/**
+ * Get the AI prompt description for a category root
+ */
+export function getRootPromptDescription(root: string): string {
+  const config = ROOT_CONFIG.find((r) => r.dbValue === root);
+  return config?.promptDescription || root.toLowerCase();
 }

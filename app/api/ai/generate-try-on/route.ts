@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateTryOnImage } from "@/lib/gemini";
 import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
-import { fetchImageAsBase64 } from "@/lib/images";
+import { fetchImageAsBase64, compressImageBase64 } from "@/lib/images";
 
 /**
  * Generate virtual try-on image via Gemini AI
@@ -30,68 +30,127 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userPhotoBase64, itemIds, outfitDescription, outfitImageUrl } = body;
+    const {
+      userPhotoBase64,
+      itemIds,
+      outfitId,
+      mode,
+    }: {
+      userPhotoBase64?: string;
+      itemIds?: string[];
+      outfitId?: string;
+      mode?: "items" | "outfits";
+    } = body;
 
     // Validate user photo
     if (!userPhotoBase64) {
       return NextResponse.json({ error: "User photo is required" }, { status: 400 });
     }
 
-    // Validate that we have either itemIds OR outfitImageUrl
-    if ((!itemIds || itemIds.length === 0) && !outfitImageUrl) {
-      return NextResponse.json({ error: "At least one clothing item or outfit is required" }, { status: 400 });
+    // Determine mode (items vs outfits) with backwards compatibility
+    const effectiveMode: "items" | "outfits" =
+      mode === "items" || mode === "outfits"
+        ? mode
+        : itemIds && itemIds.length > 0
+        ? "items"
+        : "outfits";
+
+    // Mode-specific validation
+    if (effectiveMode === "items" && (!itemIds || itemIds.length === 0)) {
+      return NextResponse.json(
+        { error: "At least one clothing item is required" },
+        { status: 400 }
+      );
     }
 
-    const clothingImagesBase64: string[] = [];
-    let finalDescription = outfitDescription || "";
+    if (effectiveMode === "outfits" && !outfitId) {
+      return NextResponse.json(
+        { error: "An outfit selection is required" },
+        { status: 400 }
+      );
+    }
 
-    if (itemIds && itemIds.length > 0) {
-      // Fetch item images from database
+    // Compress user photo for AI processing (reduces IMAGE_OTHER errors from large images)
+    const compressedUserPhoto = await compressImageBase64(userPhotoBase64);
+
+    // Build clothing items with categories for items mode
+    let clothingItems: { base64: string; category: string }[] | undefined;
+    let outfitImageBase64: string | undefined;
+
+    if (effectiveMode === "items" && itemIds && itemIds.length > 0) {
+      // Fetch item images with categories from database
       const { data: items, error: itemsError } = await supabase
         .from("items")
-        .select("id, name, image_url")
-        .in("id", itemIds);
+        .select("id, name, image_url, categories(name, root)")
+        .in("id", itemIds)
+        .eq("user_id", user.id);
 
       if (itemsError) {
         return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });
       }
 
-      const itemNames: string[] = [];
-
+      clothingItems = [];
       for (const item of items || []) {
         if (!item.image_url) continue;
 
-        const base64 = await fetchImageAsBase64(item.image_url, `item ${item.id}`);
+        // Compress images for AI processing
+        const base64 = await fetchImageAsBase64(item.image_url, `item ${item.id}`, true);
         if (base64) {
-          clothingImagesBase64.push(base64);
-          itemNames.push(item.name);
+          // Get the root category (Headwear, Top, Bottom, Full Body, Footwear, Accessories)
+          // Supabase returns the relation as an object (not array) for single FK
+          const categoryData = item.categories as unknown as { name: string; root: string } | null;
+          const category = categoryData?.root || "Top";
+          clothingItems.push({ base64, category });
         }
       }
 
-      if (!finalDescription) {
-        finalDescription = itemNames.join(", ");
+      if (clothingItems.length === 0) {
+        return NextResponse.json(
+          { error: "Could not load any clothing images. Please check your selection." },
+          { status: 400 }
+        );
       }
     }
 
-    if (outfitImageUrl) {
-      const base64 = await fetchImageAsBase64(outfitImageUrl, "outfit image");
-      if (!base64) {
+    if (effectiveMode === "outfits" && outfitId) {
+      // Fetch outfit image from database
+      const { data: outfits, error: outfitsError } = await supabase
+        .from("outfits")
+        .select("id, name, generated_image_url")
+        .eq("id", outfitId)
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (outfitsError) {
+        return NextResponse.json({ error: "Failed to fetch outfit" }, { status: 500 });
+      }
+
+      const outfit = outfits?.[0];
+
+      if (!outfit || !outfit.generated_image_url) {
+        return NextResponse.json(
+          { error: "Selected outfit could not be found or has no image" },
+          { status: 400 }
+        );
+      }
+
+      // Compress outfit image for AI processing
+      outfitImageBase64 = await fetchImageAsBase64(
+        outfit.generated_image_url,
+        `outfit ${outfit.id}`,
+        true
+      ) || undefined;
+
+      if (!outfitImageBase64) {
         return NextResponse.json({ error: "Failed to load outfit image" }, { status: 400 });
       }
-      clothingImagesBase64.push(base64);
-    }
-
-    if (clothingImagesBase64.length === 0) {
-      return NextResponse.json(
-        { error: "Could not load any clothing images. Please check your selection." },
-        { status: 400 }
-      );
     }
 
     const result = await generateTryOnImage({
-      userPhotoBase64,
-      outfitDescription: finalDescription,
-      clothingImagesBase64,
+      mode: effectiveMode,
+      userPhotoBase64: compressedUserPhoto,
+      clothingItems,
+      outfitImageBase64,
     });
 
     const fileName = `tryon-${Date.now()}.jpg`;
