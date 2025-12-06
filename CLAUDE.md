@@ -2,88 +2,84 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
+## Development Commands
 
 ```bash
-pnpm dev          # Start dev server on port 3000
-pnpm build        # Production build
-pnpm lint         # ESLint check
+pnpm dev       # Start development server (port 3000)
+pnpm build     # Production build
+pnpm start     # Start production server
+pnpm lint      # Run ESLint
 ```
+
+Package manager: **pnpm 10.14.0**
+
+## Tech Stack
+
+- **Framework:** Next.js 15 (App Router) with TypeScript
+- **UI:** shadcn/ui + Radix UI + Tailwind CSS
+- **Backend:** Supabase (auth, database with RLS, storage)
+- **AI:** Google Gemini 2.5 Flash Image model
+- **i18n:** next-intl (English, Portuguese)
 
 ## Architecture Overview
 
-This is a Next.js 15 (App Router) wardrobe management app with AI-powered outfit generation using Google Gemini.
+### Routing Structure
 
-### Route Groups
+- `/app/(auth)/` - Login flow with language switcher
+- `/app/(main)/` - Protected app routes (home, categories, items, outfits)
+- `/app/api/ai/` - AI generation endpoints (generate-outfit, generate-try-on)
 
-- `app/(auth)/` - Public authentication pages (login). Uses minimal layout.
-- `app/(main)/` - Protected app pages with shared header/footer layout. All routes here require auth.
-- `app/api/ai/` - AI generation endpoints (authenticated via Supabase session check)
+### Key Patterns
 
-### Supabase Integration
+**Single Sources of Truth:**
 
-**Client creation patterns** (important - use the right one):
+- `lib/categories.ts` - Category root types with icons and translation keys
+- `lib/features.ts` - Pro feature definitions and gating logic
 
-- Server Components/Route Handlers: `import { createClient } from "@/lib/supabase/server"`
-- Client Components: `import { createClient } from "@/lib/supabase/client"`
+**Subscription Gating:**
 
-The server client is async (`await createClient()`), the browser client is sync.
+- `isProRoute(href)` checks if route requires Pro subscription
+- `ProFeatureGate` wrapper blocks access for free users
+- `ProBadge` overlay indicates locked features
 
-**Database schema** (see `supabase/schema.sql`):
+**Image Handling:**
 
-- `categories` - Clothing types with root enum: Headwear, Top, Bottom, Full Body, Footwear, Accessories (see `lib/categories.ts` for shared config)
-- `items` - Wardrobe items with image URLs (stored in `wardrobe` bucket), category references
-- `outfits` - AI-generated outfit compositions
+- Client uploads to `wardrobe/{folder}/{filename}` in Supabase Storage
+- Server converts to base64 via `fetchImageAsBase64()` for Gemini API
+- Display via Supabase public URLs
 
-All tables have RLS policies scoped to `auth.uid()`.
+**Data Fetching:**
 
-### AI Image Generation
+- Server components use Supabase directly
+- `revalidate: 0` for real-time data on gallery pages
 
-`lib/gemini.ts` wraps the `@google/genai` SDK:
+### Database Tables (Supabase)
 
-- `generateOutfitImage()` - Combines clothing items into styled flat-lay or mannequin photos
-- `generateTryOnImage()` - Virtual try-on (puts outfit on user photo)
-- Uses `gemini-2.5-flash-image` model with TEXT+IMAGE response modalities
-- Has built-in retry logic for 429 rate limits with exponential backoff
+- `categories` - User categories with root type (Headwear, Top, Bottom, Full Body, Footwear, Accessories)
+- `items` - Wardrobe items with image_url, category_id, is_favorite
+- `outfits` - Generated images with type (outfit | tryon)
+- `user_subscriptions` - Subscription tier (free | pro)
 
-**Note**: This module is server-only due to API key access. Types are exported from `lib/gemini-types.ts` for client use.
+All tables have RLS policies for user data isolation.
 
-### Middleware Auth Flow
+### AI Generation (Gemini)
 
-`middleware.ts` handles session refresh and route protection:
+- Uses narrative photographer-style prompts per Google best practices
+- Two modes: compose from selected items OR pure text-to-image
+- Virtual try-on preserves user pose/face/background
+- Implements exponential backoff retry for rate limits
 
-- Public routes: `/login`, `/auth/callback`
-- All other routes redirect to `/login` if unauthenticated
-- API routes excluded from middleware (handle their own auth)
+### Internationalization
 
-### UI Components
+- Server: `getTranslations("namespace")`
+- Client: `useTranslations("namespace")`
+- Messages in `/messages/en.json` and `/messages/pt.json`
+- Namespace pattern: home, nav, common, pro, auth, categories, items, outfits
 
-- `components/ui/` - shadcn/ui primitives (Button, Card, Input, etc.)
-- `components/` - App-specific components (ImageUploader, ItemsGallery, OutfitsGallery)
+## Environment Variables
 
-### Internationalization (i18n)
-
-Uses `next-intl` with cookie-based locale detection (no URL prefixes like `/en/` or `/pt/`).
-
-**Configuration files:**
-
-- `i18n/config.ts` - Locale definitions (en, pt) with flags and display codes
-- `i18n/request.ts` - Server request configuration for next-intl
-- `messages/en.json` - English translations
-- `messages/pt.json` - Portuguese translations
-
-**Usage patterns:**
-
-- Server Components: `const t = await getTranslations()` from `next-intl/server`
-- Client Components: `const t = useTranslations()` from `next-intl`
-
-**Language switcher components:**
-
-- `LanguageSwitcher.tsx` - For main app layout (receives currentLocale as prop)
-- `LoginLanguageSwitcher.tsx` - For login page (reads locale from cookie)
-
-Locale is stored in `NEXT_LOCALE` cookie and persists across sessions.
-
-### Path Aliases
-
-`@/*` maps to project root (configured in `tsconfig.json`).
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+GEMINI_API_KEY
+```
