@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Star, Trash2, Wand2, X } from "lucide-react";
+import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import CategoryDropdown from "@/components/CategoryDropdown";
 import type { CategoryRoot } from "@/lib/categories";
+
+/** Number of items to show per page in the grid */
+const ITEMS_PER_PAGE = 12;
 
 /** Item data for gallery display */
 export type GalleryItem = {
@@ -45,6 +48,7 @@ export default function ItemsGallery({
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -68,6 +72,7 @@ export default function ItemsGallery({
     if (onSelectCategory) onSelectCategory(id);
     setSelectedCategoryId(id);
     setShowFavoritesOnly(false);
+    setCurrentPage(0);
   };
 
   const filteredItems = useMemo(() => {
@@ -80,6 +85,16 @@ export default function ItemsGallery({
     }
     return filtered;
   }, [items, selectedCategoryId, showFavoritesOnly]);
+
+  // Paginated items for current page
+  const paginatedItems = useMemo(() => {
+    return filteredItems.slice(
+      currentPage * ITEMS_PER_PAGE,
+      (currentPage + 1) * ITEMS_PER_PAGE
+    );
+  }, [filteredItems, currentPage]);
+
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 
   async function handleDelete(item: GalleryItem) {
     if (!confirm(t('items.deleteConfirm', { name: item.name }))) return;
@@ -198,7 +213,10 @@ export default function ItemsGallery({
         {/* Favorites toggle */}
         <button
           type="button"
-          onClick={() => setShowFavoritesOnly((prev) => !prev)}
+          onClick={() => {
+            setShowFavoritesOnly((prev) => !prev);
+            setCurrentPage(0);
+          }}
           className={`p-2 rounded-lg transition-all ${
             showFavoritesOnly
               ? "bg-foreground text-background"
@@ -225,8 +243,9 @@ export default function ItemsGallery({
 
       {/* Grid */}
       {filteredItems.length > 0 ? (
+        <>
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredItems.map((it, index) => (
+          {paginatedItems.map((it, index) => (
             <li
               key={it.id}
               className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/20 transition-all"
@@ -278,6 +297,34 @@ export default function ItemsGallery({
             </li>
           ))}
         </ul>
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+              disabled={currentPage === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {t("common.previous")}
+            </button>
+            <span className="text-sm text-muted-foreground">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={currentPage >= totalPages - 1}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              {t("common.next")}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        </>
       ) : (
         <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
           <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">

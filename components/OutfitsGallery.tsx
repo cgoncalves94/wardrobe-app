@@ -5,9 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt } from "lucide-react";
+import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
+
+/** Number of outfits to show per page in the grid */
+const OUTFITS_PER_PAGE = 9;
 
 /** Outfit data for gallery display */
 export type Outfit = {
@@ -36,6 +39,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   const [tryons, setTryons] = useState<Outfit[]>(initialTryons);
   const [activeTab, setActiveTab] = useState<TabType>(tabParam === "tryons" ? "tryons" : "outfits");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -48,6 +52,16 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
     }
     return activeList;
   }, [activeList, showFavoritesOnly]);
+
+  // Paginated items for current page
+  const paginatedItems = useMemo(() => {
+    return filteredItems.slice(
+      currentPage * OUTFITS_PER_PAGE,
+      (currentPage + 1) * OUTFITS_PER_PAGE
+    );
+  }, [filteredItems, currentPage]);
+
+  const totalPages = Math.ceil(filteredItems.length / OUTFITS_PER_PAGE);
 
   const supabase = createClient();
   const t = useTranslations();
@@ -179,6 +193,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
           onClick={() => {
             setActiveTab("outfits");
             setShowFavoritesOnly(false);
+            setCurrentPage(0);
           }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === "outfits"
@@ -201,6 +216,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
           onClick={() => {
             setActiveTab("tryons");
             setShowFavoritesOnly(false);
+            setCurrentPage(0);
           }}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === "tryons"
@@ -224,7 +240,10 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
             <div className="w-px h-6 bg-border mx-1" />
             <button
               type="button"
-              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              onClick={() => {
+                setShowFavoritesOnly(!showFavoritesOnly);
+                setCurrentPage(0);
+              }}
               className={`p-2 rounded-lg transition-all ${
                 showFavoritesOnly
                   ? "bg-foreground text-background"
@@ -262,8 +281,9 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
           </Link>
         </div>
       ) : filteredItems.length > 0 ? (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredItems.map((outfit) => (
+          {paginatedItems.map((outfit) => (
           <button
             key={outfit.id}
             type="button"
@@ -306,6 +326,34 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
           </button>
         ))}
         </div>
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+              disabled={currentPage === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {t("common.previous")}
+            </button>
+            <span className="text-sm text-muted-foreground">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={currentPage >= totalPages - 1}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              {t("common.next")}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        </>
       ) : (
         <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
           <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">
