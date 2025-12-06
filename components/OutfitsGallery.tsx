@@ -9,8 +9,8 @@ import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt, ChevronLeft, ChevronRigh
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
-/** Number of outfits to show per page in the grid */
-const OUTFITS_PER_PAGE = 9;
+/** Number of outfits to show per page in the grid (divisible by 1, 2, 3 columns) */
+const OUTFITS_PER_PAGE = 12;
 
 /** Outfit data for gallery display */
 export type Outfit = {
