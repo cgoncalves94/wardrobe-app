@@ -186,7 +186,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-4">
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
