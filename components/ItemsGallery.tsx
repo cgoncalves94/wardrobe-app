@@ -7,6 +7,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
+import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
 import CategoryDropdown from "@/components/CategoryDropdown";
 import type { CategoryRoot } from "@/lib/categories";
 
@@ -49,7 +50,7 @@ export default function ItemsGallery({
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_DESKTOP);
+  const itemsPerPage = useResponsivePageSize(ITEMS_PER_PAGE_MOBILE, ITEMS_PER_PAGE_DESKTOP);
   const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
@@ -69,17 +70,6 @@ export default function ItemsGallery({
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
-
-  // Responsive pagination - sync with grid breakpoint (sm: 640px)
-  useEffect(() => {
-    function updatePageSize() {
-      const isDesktop = window.innerWidth >= 640;
-      setItemsPerPage(isDesktop ? ITEMS_PER_PAGE_DESKTOP : ITEMS_PER_PAGE_MOBILE);
-    }
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
-  }, []);
 
   const setCategory = (id: string | null) => {
     if (onSelectCategory) onSelectCategory(id);
@@ -108,6 +98,13 @@ export default function ItemsGallery({
   }, [filteredItems, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+  // Reset page if it becomes out of bounds after resize
+  useEffect(() => {
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(totalPages - 1);
+    }
+  }, [itemsPerPage, filteredItems.length, currentPage, totalPages]);
 
   async function handleDelete(item: GalleryItem) {
     if (!confirm(t('items.deleteConfirm', { name: item.name }))) return;

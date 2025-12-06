@@ -8,6 +8,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
+import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
 
 /** Responsive page sizes: 6 for 1-col mobile, 12 for 2-4 col desktop (3 rows of 4) */
 const OUTFITS_PER_PAGE_MOBILE = 6;
@@ -40,7 +41,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   const [tryons, setTryons] = useState<Outfit[]>(initialTryons);
   const [activeTab, setActiveTab] = useState<TabType>(tabParam === "tryons" ? "tryons" : "outfits");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [outfitsPerPage, setOutfitsPerPage] = useState(OUTFITS_PER_PAGE_DESKTOP);
+  const outfitsPerPage = useResponsivePageSize(OUTFITS_PER_PAGE_MOBILE, OUTFITS_PER_PAGE_DESKTOP);
   const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
@@ -80,16 +81,12 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
     return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
 
-  // Responsive pagination - sync with grid breakpoint (sm: 640px)
+  // Reset page if it becomes out of bounds after resize
   useEffect(() => {
-    function updatePageSize() {
-      const isDesktop = window.innerWidth >= 640;
-      setOutfitsPerPage(isDesktop ? OUTFITS_PER_PAGE_DESKTOP : OUTFITS_PER_PAGE_MOBILE);
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(totalPages - 1);
     }
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
-  }, []);
+  }, [outfitsPerPage, filteredItems.length, currentPage, totalPages]);
 
   async function handleDelete(outfit: Outfit) {
     if (!confirm(t('outfits.deleteConfirm', { name: outfit.name }))) return;

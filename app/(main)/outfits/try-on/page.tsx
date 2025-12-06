@@ -3,13 +3,14 @@
  */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useItemsByCategory } from "@/hooks/use-items-by-category";
+import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ImageUploader from "@/components/ImageUploader";
 import ItemRow from "@/components/ItemRow";
@@ -70,9 +71,16 @@ export default function TryOnPage() {
   // Selected outfit (for outfits mode)
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
 
-  // Responsive pagination - matches grid breakpoint (sm: 640px)
-  const [outfitsPerPage, setOutfitsPerPage] = useState(OUTFITS_PER_PAGE_DESKTOP);
+  // Pagination
+  const outfitsPerPage = useResponsivePageSize(OUTFITS_PER_PAGE_MOBILE, OUTFITS_PER_PAGE_DESKTOP);
   const [outfitPage, setOutfitPage] = useState(0);
+
+  // Memoized paginated outfits
+  const paginatedOutfits = useMemo(() => {
+    return savedOutfits.slice(outfitPage * outfitsPerPage, (outfitPage + 1) * outfitsPerPage);
+  }, [savedOutfits, outfitPage, outfitsPerPage]);
+
+  const totalOutfitPages = Math.ceil(savedOutfits.length / outfitsPerPage);
 
   // Generation state
   const [generating, setGenerating] = useState(false);
@@ -107,16 +115,12 @@ export default function TryOnPage() {
     }
   }, [generatedImage, generating]);
 
-  // Responsive pagination - sync with grid breakpoint (sm: 640px)
+  // Reset page if it becomes out of bounds after resize
   useEffect(() => {
-    function updatePageSize() {
-      const isDesktop = window.innerWidth >= 640;
-      setOutfitsPerPage(isDesktop ? OUTFITS_PER_PAGE_DESKTOP : OUTFITS_PER_PAGE_MOBILE);
+    if (outfitPage >= totalOutfitPages && totalOutfitPages > 0) {
+      setOutfitPage(totalOutfitPages - 1);
     }
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
-  }, []);
+  }, [outfitsPerPage, savedOutfits.length, outfitPage, totalOutfitPages]);
 
   useEffect(() => {
     async function loadData() {
@@ -567,11 +571,9 @@ export default function TryOnPage() {
                         <span className="text-xs text-muted-foreground/50">{savedOutfits.length}</span>
                       </div>
 
-                      {/* Grid - 2x5 on mobile, 3x3 on larger screens */}
+                      {/* Grid - 2x4 on mobile, 3x3 on larger screens */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {savedOutfits
-                          .slice(outfitPage * outfitsPerPage, (outfitPage + 1) * outfitsPerPage)
-                          .map((outfit) => {
+                        {paginatedOutfits.map((outfit) => {
                             const isSelected = selectedOutfit?.id === outfit.id;
                             return (
                               <button
@@ -611,7 +613,7 @@ export default function TryOnPage() {
                       </div>
 
                       {/* Pagination controls */}
-                      {savedOutfits.length > outfitsPerPage && (
+                      {totalOutfitPages > 1 && (
                         <div className="flex items-center justify-between pt-2">
                           <button
                             type="button"
@@ -623,12 +625,12 @@ export default function TryOnPage() {
                             {t("common.previous")}
                           </button>
                           <span className="text-xs text-muted-foreground">
-                            {outfitPage + 1} / {Math.ceil(savedOutfits.length / outfitsPerPage)}
+                            {outfitPage + 1} / {totalOutfitPages}
                           </span>
                           <button
                             type="button"
-                            onClick={() => setOutfitPage((p) => Math.min(Math.ceil(savedOutfits.length / outfitsPerPage) - 1, p + 1))}
-                            disabled={outfitPage >= Math.ceil(savedOutfits.length / outfitsPerPage) - 1 || isLocked}
+                            onClick={() => setOutfitPage((p) => Math.min(totalOutfitPages - 1, p + 1))}
+                            disabled={outfitPage >= totalOutfitPages - 1 || isLocked}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
                           >
                             {t("common.next")}
