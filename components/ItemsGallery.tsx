@@ -152,11 +152,14 @@ export default function ItemsGallery({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">{t('items.title')}</h2>
+        <div>
+          <h1 className="text-2xl font-semibold">{t('items.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('items.description')}</p>
+        </div>
         <div className="flex items-center gap-2">
           <Link
             href="/outfits/generate"
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm sm:px-5 sm:py-2.5 sm:text-base rounded-lg border border-border hover:bg-secondary transition-colors font-medium"
+            className="hidden lg:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:bg-secondary transition-colors font-medium"
           >
             <Wand2 className="w-4 h-4" />
             {t('outfits.createOutfit')}

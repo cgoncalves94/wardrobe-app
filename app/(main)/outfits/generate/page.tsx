@@ -6,9 +6,13 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useItemsByCategory } from "@/hooks/use-items-by-category";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ItemRow from "@/components/ItemRow";
 import ToggleButtonGroup from "@/components/ToggleButtonGroup";
+import LoadingState from "@/components/LoadingState";
+import ImageLightbox from "@/components/ImageLightbox";
+import type { Item } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import {
   Sparkles,
@@ -25,7 +29,14 @@ import {
   Venus,
   Mars,
   Plus,
-  ChevronUp,
+  Heart,
+  Briefcase,
+  Flame,
+  Coffee,
+  Gem,
+  Dumbbell,
+  Lightbulb,
+  type LucideIcon,
 } from "lucide-react";
 import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
@@ -34,13 +45,29 @@ import { isProRoute } from "@/lib/features";
 
 type TabType = "fromItems" | "aiPicks";
 
-type Item = {
-  id: string;
-  name: string;
-  image_url: string;
-  category_id: string;
-  categories?: { name: string; root: string } | null;
+// Style icons mapping
+const STYLE_ICONS: Record<OutfitStyle, LucideIcon> = {
+  casual: Shirt,
+  formal: Briefcase,
+  "date-night": Heart,
+  work: Briefcase,
+  street: Flame,
+  cozy: Coffee,
+  elegant: Gem,
+  sporty: Dumbbell,
 };
+
+// Prompt suggestions for AI Picks tab
+const PROMPT_SUGGESTIONS: { promptKey: string; style: OutfitStyle }[] = [
+  { promptKey: "beachVacation", style: "casual" },
+  { promptKey: "jobInterview", style: "formal" },
+  { promptKey: "coffeeDate", style: "date-night" },
+  { promptKey: "weekendBrunch", style: "elegant" },
+  { promptKey: "gymSession", style: "sporty" },
+  { promptKey: "movieNight", style: "cozy" },
+  { promptKey: "streetStyle", style: "street" },
+  { promptKey: "officeDay", style: "work" },
+];
 
 export default function GenerateOutfitPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -58,7 +85,7 @@ export default function GenerateOutfitPage() {
   const [selectedAccessories, setSelectedAccessories] = useState<Item[]>([]);
 
   // AI Picks state (for "AI Picks" tab)
-  const [occasion, setOccasion] = useState("");
+  const [itemsDescription, setItemsDescription] = useState("");
   const [style, setStyle] = useState<OutfitStyle>("casual");
 
   // Shared generation state
@@ -70,14 +97,12 @@ export default function GenerateOutfitPage() {
   const [saving, setSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   const supabase = createClient();
   const router = useRouter();
   const t = useTranslations();
   const { isPro, loading: subscriptionLoading } = useSubscription();
 
-  // Close lightbox with Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") setPreviewOpen(false);
@@ -86,12 +111,16 @@ export default function GenerateOutfitPage() {
     return () => document.removeEventListener("keydown", handleKey);
   }, [previewOpen]);
 
-  // Auto-open mobile sheet when generating starts or image is ready
+  // Lock body scroll when mobile result modal is open
   useEffect(() => {
-    if (generating || generatedImage) {
-      setMobileSheetOpen(true);
+    const isMobile = window.innerWidth < 1024;
+    if (isMobile && generatedImage && !generating) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
     }
-  }, [generating, generatedImage]);
+  }, [generatedImage, generating]);
 
   useEffect(() => {
     async function loadData() {
@@ -113,12 +142,14 @@ export default function GenerateOutfitPage() {
   }, [supabase]);
 
   // Filter items by category root
-  const headwearItems = items.filter((item) => item.categories?.root === "Headwear");
-  const topItems = items.filter((item) => item.categories?.root === "Top");
-  const bottomItems = items.filter((item) => item.categories?.root === "Bottom");
-  const fullBodyItems = items.filter((item) => item.categories?.root === "Full Body");
-  const footwearItems = items.filter((item) => item.categories?.root === "Footwear");
-  const accessoryItems = items.filter((item) => item.categories?.root === "Accessories");
+  const {
+    headwear: headwearItems,
+    top: topItems,
+    bottom: bottomItems,
+    fullBody: fullBodyItems,
+    footwear: footwearItems,
+    accessories: accessoryItems,
+  } = useItemsByCategory(items);
 
   // All selected items for the visual strip
   const allSelected = [
@@ -133,6 +164,11 @@ export default function GenerateOutfitPage() {
   const hasSelection = allSelected.length > 0;
   const selectedCount = allSelected.length;
 
+  // Lock inputs when image is generated (only action buttons remain active)
+  const isLocked = !!generatedImage || generating;
+  const actionBarDimmed = isLocked;
+  const actionControlsLocked = generating;
+
   const genderLabels: Record<MannequinGender, string> = {
     female: t("outfits.genders.female"),
     male: t("outfits.genders.male"),
@@ -146,6 +182,54 @@ export default function GenerateOutfitPage() {
     street: t("outfits.styles.street"),
     cozy: t("outfits.styles.cozy"),
     elegant: t("outfits.styles.elegant"),
+    sporty: t("outfits.styles.sporty"),
+  };
+
+  const renderMobileActionBar = () => {
+    if (!showMobileActionBar) return null;
+
+    return (
+      <div className="mt-4 lg:hidden p-4 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
+        <div className="space-y-3">
+          {/* Options Row */}
+          <div className="flex items-center gap-2">
+            {/* Layout Toggle */}
+            <ToggleButtonGroup
+              options={[
+                { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+                { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-3.5 h-3.5" /> },
+              ]}
+              value={useMannequin ? "mannequin" : "flatlay"}
+              onChange={(val) => setUseMannequin(val === "mannequin")}
+              size="sm"
+              stretch={false}
+            />
+
+            {/* Gender Toggle */}
+            <ToggleButtonGroup
+              options={[
+                { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-3.5 h-3.5" /> },
+                { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-3.5 h-3.5" /> },
+              ]}
+              value={mannequinGender}
+              onChange={(val) => setMannequinGender(val as MannequinGender)}
+              size="sm"
+            />
+          </div>
+
+          {/* Generate Button */}
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={activeTab === "fromItems" ? !hasSelection : !itemsDescription.trim()}
+            className="w-full flex items-center justify-center gap-2 h-12 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-40 transition-all active:scale-[0.98]"
+          >
+            <Wand2 className="w-4 h-4" />
+            {t("outfits.generateOutfit")}
+          </button>
+        </div>
+      </div>
+    );
   };
 
   async function handleGenerate() {
@@ -155,7 +239,7 @@ export default function GenerateOutfitPage() {
         return;
       }
     } else {
-      if (!occasion.trim()) {
+      if (!itemsDescription.trim()) {
         toast.error(t("outfits.enterOccasion"));
         return;
       }
@@ -178,7 +262,7 @@ export default function GenerateOutfitPage() {
               accessoryIds: selectedAccessories.map((a) => a.id),
             }
           : {
-              occasion: occasion.trim(),
+              itemsDescription: itemsDescription.trim(),
               style,
             }),
       };
@@ -250,16 +334,7 @@ export default function GenerateOutfitPage() {
 
   // Loading state
   if (loading || subscriptionLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-foreground/10 to-foreground/5 flex items-center justify-center">
-            <Sparkles className="w-8 h-8 text-foreground/50 animate-pulse" />
-          </div>
-          <p className="text-muted-foreground text-sm">{t("outfits.loadingWardrobe")}</p>
-        </div>
-      </div>
-    );
+    return <LoadingState message={t("outfits.loadingWardrobe")} />;
   }
 
   // Pro gate
@@ -281,11 +356,10 @@ export default function GenerateOutfitPage() {
     );
   }
 
-  // Extra padding only when mobile action bar is visible
-  const showMobileActionBar = activeTab === "aiPicks" || hasSelection;
+  const showMobileActionBar = !generating;
 
   return (
-    <div className={`lg:pb-8 ${showMobileActionBar ? "pb-24" : "pb-4"}`}>
+    <div className="pb-4 lg:pb-8">
       {/* Header - Minimal */}
       <div className="mb-6">
         <Link
@@ -296,7 +370,7 @@ export default function GenerateOutfitPage() {
           {t("outfits.title")}
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight">{t("outfits.createOutfit")}</h1>
-        <p className="text-muted-foreground text-sm mt-1">
+        <p className="text-muted-foreground mt-1">
           {activeTab === "fromItems"
             ? t("outfits.selectItemsDescription")
             : t("outfits.aiPicksDescription")}
@@ -304,10 +378,10 @@ export default function GenerateOutfitPage() {
       </div>
 
       {/* Mode Tabs */}
-      <div className={`flex gap-2 mb-6 ${generating ? "opacity-50 pointer-events-none" : ""}`}>
+      <div className={`flex gap-2 mb-6 ${isLocked ? "opacity-50 pointer-events-none" : ""}`}>
         <button
           type="button"
-          disabled={generating}
+          disabled={isLocked}
           onClick={() => {
             setActiveTab("fromItems");
             setGeneratedImage(null);
@@ -324,7 +398,7 @@ export default function GenerateOutfitPage() {
         </button>
         <button
           type="button"
-          disabled={generating}
+          disabled={isLocked}
           onClick={() => {
             setActiveTab("aiPicks");
             setGeneratedImage(null);
@@ -342,191 +416,197 @@ export default function GenerateOutfitPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Left Column - Selection Area */}
-        <div className="space-y-6 lg:border-r lg:border-foreground/10 lg:pr-8">
-          {/* AI Picks Tab */}
-          {activeTab === "aiPicks" && (
-            <div className="space-y-6">
-              {/* Occasion Input */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium">{t("outfits.occasionLabel")}</label>
-                <input
-                  type="text"
-                  value={occasion}
-                  onChange={(e) => setOccasion(e.target.value)}
-                  placeholder={t("outfits.occasionPlaceholder")}
-                  className="w-full h-12 px-4 rounded-xl border-0 bg-secondary/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm"
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        {/* Selection Area - grid stacking renders both tabs, shows one, height = max of both */}
+        <div className="grid min-w-0">
+          {/* AI Picks Tab - always rendered, opacity controlled for instant switch */}
+          <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${activeTab !== "aiPicks" ? "opacity-0 pointer-events-none max-h-0 overflow-hidden lg:max-h-none lg:overflow-visible" : "opacity-100"}`}>
+            <div className="flex flex-col gap-4 lg:h-full">
+              {/* Description Input */}
+              <div className="p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t("outfits.itemsDescriptionLabel")}
+                  </span>
+                </div>
+                <textarea
+                  value={itemsDescription}
+                  onChange={(e) => setItemsDescription(e.target.value)}
+                  placeholder={t("outfits.itemsDescriptionPlaceholder")}
+                  rows={4}
+                  disabled={isLocked}
+                  className="w-full px-4 py-3 rounded-xl border-0 bg-background/60 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm resize-none disabled:opacity-50"
                 />
               </div>
 
-              {/* Style Pills */}
-              <div className="space-y-3">
-                <label className="text-sm font-medium">{t("outfits.style")}</label>
-                <div className="flex flex-wrap gap-2">
-                  {OUTFIT_STYLES.map((s) => (
-                    <button
-                      key={s.value}
-                      type="button"
-                      onClick={() => setStyle(s.value)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        style === s.value
-                          ? "bg-foreground text-background"
-                          : "bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
-                      }`}
-                    >
-                      {s.emoji} {styleLabels[s.value]}
-                    </button>
-                  ))}
+              {/* Style Selection */}
+              <div className="p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <Sparkles className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t("outfits.style")}
+                  </span>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* From Items Tab */}
-          {activeTab === "fromItems" && (
-            <div className="space-y-5">
-              {/* Selected Items Strip */}
-              {hasSelection && (
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-foreground/[0.03] to-transparent border border-foreground/[0.06]">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Your Outfit ({selectedCount})
-                    </span>
-                    <div className="flex items-center gap-3">
-                      {/* New Outfit button - mobile only when generated */}
-                      {generatedImage && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setGeneratedImage(null);
-                            setOutfitName("");
-                            clearAllSelections();
-                          }}
-                          className="text-xs font-medium text-foreground hover:opacity-70 transition-opacity lg:hidden"
-                        >
-                          {t("outfits.newOutfit")}
-                        </button>
-                      )}
-                      {/* Clear selection - hidden on mobile when generating/generated */}
-                      {!generating && !generatedImage && (
-                        <button
-                          type="button"
-                          onClick={clearAllSelections}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {t("aria.clearSelection")}
-                        </button>
-                      )}
-                      {/* Desktop only: show clear when generated */}
-                      {generatedImage && (
-                        <button
-                          type="button"
-                          onClick={clearAllSelections}
-                          className="hidden lg:block text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {t("aria.clearSelection")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {allSelected.map((item) => (
-                      <div
-                        key={item.id}
-                        className="relative w-14 h-14 rounded-lg overflow-hidden ring-1 ring-white/10"
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {OUTFIT_STYLES.map((s) => {
+                    const StyleIcon = STYLE_ICONS[s.value];
+                    const isSelected = style === s.value;
+                    return (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => setStyle(s.value)}
+                        disabled={isLocked}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 ${
+                          isSelected
+                            ? "bg-foreground text-background"
+                            : "bg-background/60 text-muted-foreground hover:text-foreground hover:bg-background/80"
+                        }`}
                       >
-                        <Image
-                          src={item.image_url}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
-                          sizes="56px"
-                        />
-                      </div>
-                    ))}
-                    {/* Only show plus placeholder when not generated */}
-                    {!generatedImage && (
-                      <div className="w-14 h-14 rounded-lg border-2 border-dashed border-foreground/10 flex items-center justify-center text-muted-foreground/40">
-                        <Plus className="w-5 h-5" />
-                      </div>
-                    )}
-                  </div>
+                        <StyleIcon className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{styleLabels[s.value]}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-
-              {/* Item Categories - Horizontal Scroll (hidden on mobile when generating/generated) */}
-              <div className={`space-y-5 ${generating || generatedImage ? "hidden lg:block" : ""}`}>
-                {headwearItems.length > 0 && (
-                  <ItemRow
-                    title={t("categories.roots.headwear")}
-                    items={headwearItems}
-                    selected={selectedHeadwear}
-                    onSelect={setSelectedHeadwear}
-                    icon={getRootIcon("Headwear")}
-                    disabled={generating}
-                  />
-                )}
-
-                <ItemRow
-                  title={t("categories.roots.top")}
-                  items={topItems}
-                  selected={selectedTop}
-                  onSelect={setSelectedTop}
-                  icon={getRootIcon("Top")}
-                  disabled={generating}
-                />
-
-                <ItemRow
-                  title={t("categories.roots.bottom")}
-                  items={bottomItems}
-                  selected={selectedBottom}
-                  onSelect={setSelectedBottom}
-                  icon={getRootIcon("Bottom")}
-                  disabled={generating}
-                />
-
-                {fullBodyItems.length > 0 && (
-                  <ItemRow
-                    title={t("categories.roots.fullBody")}
-                    items={fullBodyItems}
-                    selected={selectedFullBody}
-                    onSelect={setSelectedFullBody}
-                    icon={getRootIcon("Full Body")}
-                    disabled={generating}
-                  />
-                )}
-
-                {footwearItems.length > 0 && (
-                  <ItemRow
-                    title={t("categories.roots.footwear")}
-                    items={footwearItems}
-                    selected={selectedFootwear}
-                    onSelect={setSelectedFootwear}
-                    icon={getRootIcon("Footwear")}
-                    disabled={generating}
-                  />
-                )}
-
-                {accessoryItems.length > 0 && (
-                  <ItemRow
-                    title={t("categories.roots.accessories")}
-                    items={accessoryItems}
-                    icon={getRootIcon("Accessories")}
-                    multiSelect
-                    selectedMulti={selectedAccessories}
-                    onMultiSelect={setSelectedAccessories}
-                    disabled={generating}
-                  />
-                )}
               </div>
+
+              {/* Try These - Inline prompt suggestions (hidden on mobile to save space) */}
+              <div className="hidden sm:flex sm:flex-col flex-1 p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <Lightbulb className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t("outfits.tryThese")}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 auto-rows-fr">
+                  {PROMPT_SUGGESTIONS.map(({ promptKey, style: suggestionStyle }) => {
+                    const Icon = STYLE_ICONS[suggestionStyle];
+                    const prompt = t(`outfits.prompts.${promptKey}`);
+                    return (
+                      <button
+                        key={promptKey}
+                        type="button"
+                        disabled={isLocked}
+                        onClick={() => {
+                          setItemsDescription(prompt);
+                          setStyle(suggestionStyle);
+                        }}
+                        className="p-3.5 rounded-xl bg-background/40 border border-foreground/[0.04] text-left hover:bg-background/60 hover:border-foreground/10 transition-all group disabled:opacity-50"
+                      >
+                        <p className="text-sm text-foreground/70 group-hover:text-foreground line-clamp-2">
+                          {prompt}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
+                          <Icon className="w-3 h-3" />
+                          {styleLabels[suggestionStyle]}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mobile Action Bar (inline for AI Picks) */}
+              {renderMobileActionBar()}
             </div>
-          )}
+          </div>
+
+          {/* From Items Tab - always rendered, opacity controlled for instant switch */}
+          <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${activeTab !== "fromItems" ? "opacity-0 pointer-events-none max-h-0 overflow-hidden lg:max-h-none lg:overflow-visible" : "opacity-100"}`}>
+            <div className={activeTab === "fromItems" && (generating || generatedImage) ? "hidden lg:block" : ""}>
+              {/* Item Categories - wrapped in container to match AI Picks style */}
+              <div className="p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
+                <div className="space-y-5">
+                  {headwearItems.length > 0 && (
+                    <ItemRow
+                      title={t("categories.roots.headwear")}
+                      items={headwearItems}
+                      selected={selectedHeadwear}
+                      onSelect={setSelectedHeadwear}
+                      icon={getRootIcon("Headwear")}
+                      disabled={isLocked}
+                    />
+                  )}
+
+                  <ItemRow
+                    title={t("categories.roots.top")}
+                    items={topItems}
+                    selected={selectedTop}
+                    onSelect={(item) => {
+                      // Full-body outfits exclude separate tops; selecting a top clears any full-body piece.
+                      setSelectedFullBody(null);
+                      setSelectedTop(item);
+                    }}
+                    icon={getRootIcon("Top")}
+                    disabled={isLocked}
+                  />
+
+                  <ItemRow
+                    title={t("categories.roots.bottom")}
+                    items={bottomItems}
+                    selected={selectedBottom}
+                    onSelect={(item) => {
+                      // Full-body outfits exclude separate bottoms; selecting a bottom clears any full-body piece.
+                      setSelectedFullBody(null);
+                      setSelectedBottom(item);
+                    }}
+                    icon={getRootIcon("Bottom")}
+                    disabled={isLocked}
+                  />
+
+                  {fullBodyItems.length > 0 && (
+                    <ItemRow
+                      title={t("categories.roots.fullBody")}
+                      items={fullBodyItems}
+                      selected={selectedFullBody}
+                      onSelect={(item) => {
+                        setSelectedFullBody(item);
+                        if (item) {
+                          setSelectedTop(null);
+                          setSelectedBottom(null);
+                        }
+                      }}
+                      icon={getRootIcon("Full Body")}
+                      disabled={isLocked}
+                    />
+                  )}
+
+                  {footwearItems.length > 0 && (
+                    <ItemRow
+                      title={t("categories.roots.footwear")}
+                      items={footwearItems}
+                      selected={selectedFootwear}
+                      onSelect={setSelectedFootwear}
+                      icon={getRootIcon("Footwear")}
+                      disabled={isLocked}
+                    />
+                  )}
+
+                  {accessoryItems.length > 0 && (
+                    <ItemRow
+                      title={t("categories.roots.accessories")}
+                      items={accessoryItems}
+                      icon={getRootIcon("Accessories")}
+                      multiSelect
+                      selectedMulti={selectedAccessories}
+                      onMultiSelect={setSelectedAccessories}
+                      disabled={isLocked}
+                    />
+                  )}
+                </div>
+              </div>
+              {/* Mobile Action Bar (inline for From Items) */}
+              {renderMobileActionBar()}
+            </div>
+          </div>
         </div>
 
-        {/* Right Column - Preview (always hidden on mobile, use bottom sheet instead) */}
-        <div className="hidden lg:flex lg:flex-col lg:sticky lg:top-4">
-          <div className="flex-1 min-h-[500px] relative rounded-2xl overflow-hidden bg-gradient-to-br from-secondary/80 to-secondary/40">
+        {/* Right Column - Preview + Action Bar (always visible on desktop) */}
+        <div className="hidden lg:flex lg:flex-col lg:gap-4">
+          {/* Preview Panel */}
+          <div className="flex-1 min-h-[400px] relative rounded-2xl overflow-hidden bg-secondary/30 border border-border/50">
             {generating ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                 <div className="w-16 h-16 rounded-2xl bg-foreground/10 flex items-center justify-center">
@@ -567,7 +647,7 @@ export default function GenerateOutfitPage() {
                       type="button"
                       onClick={handleSave}
                       disabled={saving || !outfitName.trim()}
-                      className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-white text-black font-medium text-sm hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-white text-black font-medium text-sm hover:bg-white/90 disabled:opacity-50 transition-all"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       {t("outfits.save")}
@@ -585,328 +665,228 @@ export default function GenerateOutfitPage() {
                 </div>
               </>
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground p-6">
-                {/* Decorative grid pattern */}
-                <div className="absolute inset-0 opacity-[0.015] pattern-grid" />
-                <div className="relative flex flex-col items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-foreground/[0.08] to-foreground/[0.02] flex items-center justify-center border border-foreground/[0.05]">
-                    <Wand2 className="w-9 h-9 text-foreground/25" />
+              <div className="absolute inset-0 flex flex-col">
+                {/* Fixed selection strip at top - only for fromItems when items selected */}
+                {activeTab === "fromItems" && hasSelection && (
+                  <div className="flex items-center justify-between gap-3 p-3 border-b border-border/30 bg-background/30">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex-shrink-0">
+                      {t("outfits.selected", { count: selectedCount })}
+                    </span>
+                    <div className="flex items-center gap-2 overflow-x-auto flex-1 justify-end">
+                      {allSelected.map((item) => (
+                        <div
+                          key={item.id}
+                          className="relative w-12 h-12 rounded-lg overflow-hidden ring-1 ring-border/50 flex-shrink-0"
+                        >
+                          <Image
+                            src={item.image_url!}
+                            alt={item.name}
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={clearAllSelections}
+                        className="w-12 h-12 rounded-lg border border-border/40 flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+                        aria-label={t("aria.clearSelection")}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-center space-y-1">
-                    <p className="text-sm font-medium text-foreground/50">
+                )}
+                {/* Center placeholder */}
+                <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                  <div className="w-20 h-20 rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center">
+                    <Sparkles className="w-10 h-10 text-muted-foreground/30" />
+                  </div>
+                  <div className="text-center px-8">
+                    <p className="text-sm text-muted-foreground">
                       {activeTab === "fromItems"
-                        ? hasSelection
-                          ? t("outfits.clickGenerate")
-                          : t("outfits.selectItemsToStart")
-                        : occasion.trim()
-                        ? t("outfits.clickGenerate")
-                        : t("outfits.enterOccasionToStart")}
+                        ? (hasSelection ? t("outfits.clickGenerate") : t("outfits.selectItemsToStart"))
+                        : t("outfits.enterItemsDescriptionToStart")}
                     </p>
                   </div>
                 </div>
               </div>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Mobile: Fixed Bottom Action Bar - only shows when items selected or in AI Picks mode */}
-      {showMobileActionBar && (
-        <div className={`fixed bottom-16 left-0 right-0 z-40 lg:hidden bg-background border-t border-foreground/[0.08] ${generating ? "pointer-events-none" : ""}`}>
-          <div className={`px-4 py-3 space-y-2.5 ${generating ? "opacity-50" : ""}`}>
-            {/* Options Row */}
-            <div className="flex items-center gap-2">
-              {/* Layout Toggle */}
-              <ToggleButtonGroup
-                options={[
-                  { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-                  { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-3.5 h-3.5" /> },
-                ]}
-                value={useMannequin ? "mannequin" : "flatlay"}
-                onChange={(val) => setUseMannequin(val === "mannequin")}
-                disabled={generating}
-                size="sm"
-                stretch={!useMannequin}
-              />
-
-              {/* Gender Toggle - Only when mannequin */}
-              {useMannequin && (
+          {/* Desktop Action Bar - inside right column for consistent position */}
+          <div className="flex-shrink-0">
+            <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-secondary/30 border border-foreground/[0.04]">
+              {/* Layout Options */}
+              <div className={`flex items-center gap-4 ${actionBarDimmed ? "opacity-60" : ""} ${actionControlsLocked ? "pointer-events-none" : ""}`}>
                 <ToggleButtonGroup
                   options={[
-                    { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-3.5 h-3.5" /> },
-                    { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-3.5 h-3.5" /> },
+                    { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-4 h-4" /> },
+                    { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-4 h-4" /> },
+                  ]}
+                  value={useMannequin ? "mannequin" : "flatlay"}
+                  onChange={(val) => setUseMannequin(val === "mannequin")}
+                  disabled={isLocked}
+                  size="md"
+                />
+                <ToggleButtonGroup
+                  options={[
+                    { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-4 h-4" /> },
+                    { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-4 h-4" /> },
                   ]}
                   value={mannequinGender}
                   onChange={(val) => setMannequinGender(val as MannequinGender)}
-                  disabled={generating}
+                  disabled={isLocked}
                   size="sm"
                 />
+                <span className="text-sm text-muted-foreground">
+                  {useMannequin ? t("outfits.layoutMannequinDesc") : t("outfits.layoutFlatLayDesc")}
+                </span>
+              </div>
+
+              {/* Generate / New Outfit Button */}
+              {generatedImage ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGeneratedImage(null);
+                    setOutfitName("");
+                    if (activeTab === "fromItems") {
+                      clearAllSelections();
+                    } else {
+                      setItemsDescription("");
+                    }
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-foreground font-medium text-sm hover:bg-secondary/80 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t("outfits.newOutfit")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={generating || (activeTab === "fromItems" ? !hasSelection : !itemsDescription.trim())}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-40 transition-all"
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("outfits.generating")}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      {t("outfits.generateOutfit")}
+                    </>
+                  )}
+                </button>
               )}
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Generate Button */}
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating || (activeTab === "fromItems" ? !hasSelection : !occasion.trim())}
-              className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t("outfits.generating")}
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-4 h-4" />
-                  {t("outfits.generateOutfit")}
-                </>
-              )}
-            </button>
+      {/* Mobile: Full-Screen Loading Overlay */}
+      {generating && (
+        <div className="fixed inset-0 z-[60] lg:hidden flex items-center justify-center bg-background/98 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-6 px-8 text-center">
+            {/* Animated icon container */}
+            <div className="relative">
+              <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-foreground/10 to-foreground/5 flex items-center justify-center">
+                <Sparkles className="w-12 h-12 text-foreground/70 animate-pulse" />
+              </div>
+              {/* Subtle rotating ring */}
+              <div className="absolute inset-0 rounded-3xl border-2 border-foreground/10 border-t-foreground/30 animate-spin [animation-duration:2s]" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xl font-semibold tracking-tight">{t("outfits.creatingOutfit")}</p>
+              <p className="text-sm text-muted-foreground">{t("outfits.generationTime")}</p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Mobile: Bottom Sheet for Generated Result */}
-      {(generating || generatedImage) && (
-        <div
-          className={`fixed inset-0 z-50 lg:hidden transition-all duration-300 ${
-            mobileSheetOpen ? "pointer-events-auto" : "pointer-events-none"
-          }`}
-        >
-          {/* Backdrop */}
-          <div
-            className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${
-              mobileSheetOpen ? "opacity-100" : "opacity-0"
-            }`}
-            onClick={() => !generating && setMobileSheetOpen(false)}
-          />
-
-          {/* Sheet - positioned above main nav, always captures clicks */}
-          <div
-            className={`absolute bottom-16 left-0 right-0 bg-background rounded-t-3xl transition-transform duration-300 ease-out pointer-events-auto ${
-              mobileSheetOpen ? "translate-y-0" : "translate-y-[calc(100%-80px)]"
-            }`}
-          >
-            {/* Handle */}
+      {/* Mobile: Result Modal (keeps navbar visible) */}
+      {!generating && generatedImage && (
+        <div className="fixed inset-0 z-40 lg:hidden overflow-hidden bg-background">
+          {/* Modal container - positioned between header and navbar */}
+          <div className="absolute inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.75rem)] bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.75rem)] flex flex-col bg-secondary/30 rounded-2xl overflow-hidden shadow-2xl border border-foreground/[0.06]">
+            {/* Close button */}
             <button
               type="button"
-              onClick={() => setMobileSheetOpen(!mobileSheetOpen)}
-              className="w-full pt-3 pb-2 flex justify-center"
-              aria-label={mobileSheetOpen ? t("aria.collapsePreview") : t("aria.expandPreview")}
+              onClick={() => {
+                setGeneratedImage(null);
+                setOutfitName("");
+              }}
+              className="absolute top-3 right-3 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+              aria-label={t("outfits.newOutfit")}
             >
-              <div className="w-10 h-1 rounded-full bg-foreground/20" />
+              <X className="w-4 h-4" />
             </button>
 
-            {/* Preview Mini Header (visible when collapsed) - clickable to expand */}
+            {/* Image - fills container */}
             <button
               type="button"
-              onClick={() => setMobileSheetOpen(true)}
-              className={`w-full px-4 pb-3 flex items-center gap-3 transition-opacity text-left ${
-                mobileSheetOpen ? "opacity-0 h-0 overflow-hidden pointer-events-none" : "opacity-100"
-              }`}
+              onClick={() => setPreviewOpen(true)}
+              className="flex-1 relative min-h-0"
+              aria-label={t("aria.expandPreview")}
             >
-              {generating ? (
-                <>
-                  <div className="w-12 h-12 rounded-xl bg-secondary/80 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-foreground/60 animate-pulse" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{t("outfits.creatingOutfit")}</p>
-                    <p className="text-xs text-muted-foreground">{t("outfits.generationTime")}</p>
-                  </div>
-                </>
-              ) : generatedImage ? (
-                <>
-                  <div className="w-12 h-12 rounded-xl overflow-hidden relative">
-                    <Image src={generatedImage} alt="" fill className="object-cover" sizes="48px" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{t("outfits.outfitReady")}</p>
-                    <p className="text-xs text-muted-foreground">{t("outfits.tapToExpand")}</p>
-                  </div>
-                  <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                </>
-              ) : null}
+              <Image
+                src={generatedImage}
+                alt={t("outfits.generateOutfit")}
+                fill
+                className="object-cover"
+                sizes="100vw"
+              />
+              {/* Fullscreen button */}
+              <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white text-xs font-medium">
+                {t("outfits.tapToZoom")}
+              </div>
             </button>
 
-            {/* Full Preview Content */}
-            <div
-              className={`transition-all duration-300 max-h-[calc(100vh-100px)] ${
-                mobileSheetOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-              }`}
-            >
-              <div className="px-4 pb-8 overflow-y-auto max-h-[calc(100vh-140px)]">
-                {generating ? (
-                  <div className="aspect-[3/4] rounded-2xl bg-secondary/50 flex flex-col items-center justify-center gap-4">
-                    <div className="w-20 h-20 rounded-2xl bg-foreground/10 flex items-center justify-center">
-                      <Sparkles className="w-10 h-10 text-foreground/60 animate-pulse" />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-medium text-lg">{t("outfits.creatingOutfit")}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{t("outfits.generationTime")}</p>
-                    </div>
-                  </div>
-                ) : generatedImage ? (
-                  <div className="space-y-4">
-                    {/* Image Preview */}
-                    <button
-                      type="button"
-                      onClick={() => setPreviewOpen(true)}
-                      className="w-full aspect-[3/4] relative rounded-2xl overflow-hidden"
-                    >
-                      <Image
-                        src={generatedImage}
-                        alt={t("outfits.generateOutfit")}
-                        fill
-                        className="object-cover"
-                        sizes="100vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                      <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs">
-                        {t("outfits.tapToZoom")}
-                      </div>
-                    </button>
-
-                    {/* Save Form */}
-                    <div className="space-y-3">
-                      <input
-                        type="text"
-                        placeholder={t("outfits.nameOutfitPlaceholder")}
-                        value={outfitName}
-                        onChange={(e) => setOutfitName(e.target.value)}
-                        className="w-full h-12 px-4 rounded-xl bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={handleSave}
-                          disabled={saving || !outfitName.trim()}
-                          className="flex-1 h-12 flex items-center justify-center gap-2 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          {t("outfits.save")}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleGenerate}
-                          disabled={generating}
-                          aria-label={t("aria.regenerateOutfit")}
-                          className="w-12 h-12 flex items-center justify-center rounded-xl bg-secondary/80 text-foreground transition-colors active:scale-[0.98]"
-                        >
-                          <RefreshCw className="w-5 h-5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setGeneratedImage(null);
-                            setOutfitName("");
-                            setMobileSheetOpen(false);
-                          }}
-                          aria-label={t("outfits.newOutfit")}
-                          className="w-12 h-12 flex items-center justify-center rounded-xl bg-secondary/80 text-foreground transition-colors active:scale-[0.98]"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
+            {/* Bottom action bar */}
+            <div className="flex-shrink-0 p-3 bg-background border-t border-foreground/[0.06]">
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  placeholder={t("outfits.nameOutfitPlaceholder")}
+                  value={outfitName}
+                  onChange={(e) => setOutfitName(e.target.value)}
+                  className="flex-1 h-11 px-4 rounded-xl bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || !outfitName.trim()}
+                  className="h-11 px-5 flex items-center justify-center gap-2 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {t("outfits.save")}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  aria-label={t("aria.regenerateOutfit")}
+                  className="w-11 h-11 flex items-center justify-center rounded-xl bg-secondary/80 text-foreground transition-colors active:scale-[0.98]"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Desktop Action Bar */}
-      <div className="hidden lg:block mt-8">
-        <div className="flex items-center gap-3 p-3 rounded-2xl bg-secondary/50">
-          {/* Layout Mode Toggle */}
-          <div className={`flex items-center gap-2 ${generating ? "opacity-50 pointer-events-none" : ""}`}>
-            <ToggleButtonGroup
-              options={[
-                { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-                { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-3.5 h-3.5" /> },
-              ]}
-              value={useMannequin ? "mannequin" : "flatlay"}
-              onChange={(val) => setUseMannequin(val === "mannequin")}
-              disabled={generating}
-              size="md"
-            />
-
-            {/* Gender Toggle - Only when mannequin */}
-            {useMannequin && (
-              <ToggleButtonGroup
-                options={[
-                  { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-3.5 h-3.5" /> },
-                  { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-3.5 h-3.5" /> },
-                ]}
-                value={mannequinGender}
-                onChange={(val) => setMannequinGender(val as MannequinGender)}
-                disabled={generating}
-                size="sm"
-              />
-            )}
-          </div>
-
-          {/* Mode description */}
-          <span className="text-xs text-muted-foreground">
-            {useMannequin ? t("outfits.layoutMannequinDesc") : t("outfits.layoutFlatLayDesc")}
-          </span>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Generate Button */}
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating || (activeTab === "fromItems" ? !hasSelection : !occasion.trim())}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {t("outfits.generating")}
-              </>
-            ) : (
-              <>
-                <Wand2 className="w-4 h-4" />
-                {t("outfits.generateOutfit")}
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
       {/* Preview Lightbox - z-[100] to be above everything including bottom nav */}
-      {previewOpen && generatedImage && (
-        <div
-          className="fixed inset-0 z-[100] bg-black"
-          onClick={() => setPreviewOpen(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={() => setPreviewOpen(false)}
-            className="absolute top-4 right-4 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
-            aria-label={t("aria.closeDialog")}
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <div className="relative w-full h-full p-4" onClick={(e) => e.stopPropagation()}>
-            <Image
-              src={generatedImage}
-              alt={t("outfits.generateOutfit")}
-              fill
-              className="object-contain"
-              sizes="100vw"
-              priority
-            />
-          </div>
-        </div>
-      )}
+      <ImageLightbox
+        src={generatedImage || ""}
+        alt={t("outfits.generateOutfit")}
+        open={previewOpen && !!generatedImage}
+        onClose={() => setPreviewOpen(false)}
+        closeLabel={t("aria.closeDialog")}
+      />
     </div>
   );
 }

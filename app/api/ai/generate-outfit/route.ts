@@ -27,19 +27,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { headwearItemId, topItemId, bottomItemId, fullBodyItemId, footwearItemId, accessoryIds, occasion, style, additionalPrompt, useMannequin, mannequinGender } = body;
+    const { headwearItemId, topItemId, bottomItemId, fullBodyItemId, footwearItemId, accessoryIds, itemsDescription, style, useMannequin, mannequinGender } = body;
 
     let result: { imageBase64: string; prompt: string };
 
-    // Detect mode: AI Picks (has occasion) vs From Items (has item IDs)
-    if (occasion) {
+    // Detect mode: AI Picks (has itemsDescription) vs From Items (has item IDs)
+    if (itemsDescription) {
       // AI Picks mode - pure text-to-image generation
       if (!style) {
         return NextResponse.json({ error: "Style is required for AI-generated outfits" }, { status: 400 });
       }
 
       result = await generateOutfitFromPrompt({
-        occasion,
+        itemsDescription,
         style: style as OutfitStyle,
         useMannequin,
         mannequinGender: mannequinGender as MannequinGender,
@@ -89,7 +89,6 @@ export async function POST(request: NextRequest) {
         fullBodyImageBase64: fullBodyItemId ? imageMap[fullBodyItemId] : undefined,
         footwearImageBase64: footwearItemId ? imageMap[footwearItemId] : undefined,
         accessoryImagesBase64: accessoryIds?.map((id: string) => imageMap[id]).filter(Boolean),
-        additionalPrompt,
         useMannequin,
         mannequinGender: mannequinGender as MannequinGender,
       });

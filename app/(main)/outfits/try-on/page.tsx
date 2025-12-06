@@ -6,14 +6,18 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useItemsByCategory } from "@/hooks/use-items-by-category";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ImageUploader from "@/components/ImageUploader";
 import ItemSection from "@/components/ItemSection";
+import LoadingState from "@/components/LoadingState";
+import ImageLightbox from "@/components/ImageLightbox";
+import { urlToBase64 } from "@/lib/images.client";
+import type { Item, Outfit } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import {
   Sparkles,
   Wand2,
-  X,
   Save,
   RefreshCw,
   ArrowLeft,
@@ -28,25 +32,11 @@ import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
 import { isProRoute } from "@/lib/features";
 
-type Item = {
-  id: string;
-  name: string;
-  image_url: string;
-  category_id: string;
-  categories?: { name: string; root: string } | null;
-};
-
-type Outfit = {
-  id: string;
-  name: string;
-  generated_image_url: string;
-};
-
 type SelectionMode = "items" | "outfits";
 
 export default function TryOnPage() {
   const [items, setItems] = useState<Item[]>([]);
-  const [savedOutfits, setSavedOutfits] = useState<Outfit[]>([]);
+  const [savedOutfits, setOutfits] = useState<Outfit[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Selection mode (tabs)
@@ -115,31 +105,21 @@ export default function TryOnPage() {
       ]);
 
       setItems((itemsResult.data || []) as unknown as Item[]);
-      setSavedOutfits((outfitsResult.data || []) as Outfit[]);
+      setOutfits((outfitsResult.data || []) as Outfit[]);
       setLoading(false);
     }
     loadData();
   }, [supabase]);
 
   // Filter items by category root
-  const headwearItems = items.filter(
-    (item) => item.categories?.root === "Headwear"
-  );
-  const topItems = items.filter(
-    (item) => item.categories?.root === "Top"
-  );
-  const bottomItems = items.filter(
-    (item) => item.categories?.root === "Bottom"
-  );
-  const fullBodyItems = items.filter(
-    (item) => item.categories?.root === "Full Body"
-  );
-  const footwearItems = items.filter(
-    (item) => item.categories?.root === "Footwear"
-  );
-  const accessoryItems = items.filter(
-    (item) => item.categories?.root === "Accessories"
-  );
+  const {
+    headwear: headwearItems,
+    top: topItems,
+    bottom: bottomItems,
+    fullBody: fullBodyItems,
+    footwear: footwearItems,
+    accessories: accessoryItems,
+  } = useItemsByCategory(items);
 
   const hasItemSelection = selectedHeadwear || selectedTop || selectedBottom || selectedFullBody || selectedFootwear || selectedAccessories.length > 0;
   const selectedCount = [selectedHeadwear, selectedTop, selectedBottom, selectedFullBody, selectedFootwear].filter(Boolean).length + selectedAccessories.length;
@@ -171,21 +151,6 @@ export default function TryOnPage() {
       // Clear outfit selection
       setSelectedOutfit(null);
     }
-  }
-
-  // Convert URL to base64
-  async function urlToBase64(url: string): Promise<string> {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
   }
 
   // Build outfit description from selected items
@@ -227,7 +192,7 @@ export default function TryOnPage() {
     }
 
     if (selectionMode === "outfits" && !selectedOutfit) {
-      toast.error(t("outfits.tryOn.selectSavedOutfit"));
+      toast.error(t("outfits.tryOn.selectOutfit"));
       return;
     }
 
@@ -311,18 +276,9 @@ export default function TryOnPage() {
     }
   }
 
-  // Compact item selector component
+  // Loading state
   if (loading || subscriptionLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <div className="w-14 h-14 mx-auto rounded-xl bg-secondary flex items-center justify-center">
-            <Sparkles className="w-7 h-7 text-foreground/70 animate-pulse" />
-          </div>
-          <p className="text-muted-foreground">{t("outfits.loadingWardrobe")}</p>
-        </div>
-      </div>
-    );
+    return <LoadingState message={t("outfits.loadingWardrobe")} />;
   }
 
   // Header component
@@ -542,7 +498,7 @@ export default function TryOnPage() {
                                 }`}
                               >
                                 <Image
-                                  src={item.image_url}
+                                  src={item.image_url!}
                                   alt={item.name}
                                   fill
                                   className="object-cover"
@@ -579,7 +535,7 @@ export default function TryOnPage() {
                   <div className="text-center py-8">
                     <ImageIcon className="w-10 h-10 mx-auto text-muted-foreground/50 mb-3" />
                     <p className="text-sm text-muted-foreground">
-                      {t("outfits.tryOn.noSavedOutfits")}
+                      {t("outfits.tryOn.noOutfits")}
                     </p>
                     <Link
                       href="/outfits/generate"
@@ -632,7 +588,7 @@ export default function TryOnPage() {
             type="button"
             onClick={handleGenerate}
             disabled={generating || !canGenerate}
-            className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex w-full h-12 items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 transition-all"
           >
             {generating ? (
               <>
@@ -709,7 +665,7 @@ export default function TryOnPage() {
                     type="button"
                     onClick={handleSave}
                     disabled={saving || !outfitName.trim()}
-                    className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-50 transition-all"
                   >
                     {saving ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -735,36 +691,13 @@ export default function TryOnPage() {
       </div>
 
       {/* Preview Lightbox */}
-      {previewOpen && generatedImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/95"
-          onClick={() => setPreviewOpen(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={() => setPreviewOpen(false)}
-            className="absolute top-4 right-4 p-3 rounded-full bg-black/60 text-white/90 hover:text-white hover:bg-black/80 transition-colors z-10"
-            aria-label={t("aria.closeDialog")}
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <div
-            className="relative w-full h-full p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Image
-              src={generatedImage}
-              alt={t("outfits.tryOn.title")}
-              fill
-              className="object-contain"
-              sizes="100vw"
-              priority
-            />
-          </div>
-        </div>
-      )}
+      <ImageLightbox
+        src={generatedImage || ""}
+        alt={t("outfits.tryOn.title")}
+        open={previewOpen && !!generatedImage}
+        onClose={() => setPreviewOpen(false)}
+        closeLabel={t("aria.closeDialog")}
+      />
     </div>
   );
 }

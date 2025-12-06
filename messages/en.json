@@ -20,7 +20,7 @@
   },
   "nav": {
     "home": "Home",
-    "items": "Items",
+    "items": "Wardrobe",
     "outfits": "Outfits",
     "categories": "Categories",
     "addItem": "Add Item",
@@ -58,6 +58,13 @@
     "myWardrobeDescription": "View all items",
     "uploadClothes": "Upload clothes",
     "organizeItems": "Organize items",
+    "howItWorks": "How it works",
+    "step1Title": "Upload your clothes",
+    "step1Description": "Take photos of your clothing items and add them to your digital wardrobe",
+    "step2Title": "Organize by category",
+    "step2Description": "Sort items into tops, bottoms, accessories and more for easy browsing",
+    "step3Title": "Generate outfits",
+    "step3Description": "Let AI create stylish combinations or try on looks virtually",
     "features": "Features",
     "aiOutfitGenerator": "AI Outfit Generator",
     "mixMatch": "Mix & match with AI",
@@ -67,7 +74,8 @@
     "virtualTryOnDescription": "Upload your photo and see how you would look wearing different outfits from your wardrobe."
   },
   "items": {
-    "title": "All Items",
+    "title": "My Wardrobe",
+    "description": "Browse and organize your clothing collection",
     "addItem": "Add Item",
     "addItemDescription": "Add a new piece to your wardrobe",
     "name": "Name",
@@ -113,15 +121,17 @@
     "loadingWardrobe": "Loading your wardrobe...",
     "selectItemsDescription": "Select items and let AI style them together",
     "tabs": {
-      "fromItems": "From Items",
+      "fromItems": "From Wardrobe",
       "aiPicks": "AI Picks"
     },
-    "occasionLabel": "What's the occasion?",
-    "occasionPlaceholder": "e.g., job interview, weekend brunch, date night...",
-    "aiPicksDescription": "Describe your occasion and let AI generate the perfect outfit",
-    "enterOccasion": "Please describe the occasion",
-    "enterOccasionToStart": "Describe your occasion to get started",
+    "itemsDescriptionLabel": "Describe your outfit",
+    "itemsDescriptionHelper": "What items do you want in your outfit?",
+    "itemsDescriptionPlaceholder": "e.g., blue jeans with white sneakers, floral dress...",
+    "aiPicksDescription": "Describe your outfit and let AI generate the perfect look",
+    "enterItemsDescription": "Please describe the items you want",
+    "enterItemsDescriptionToStart": "Describe your outfit to get started",
     "style": "Style",
+    "styleHelper": "Choose the vibe for your look",
     "displayOnMannequin": "Display on mannequin",
     "layoutMode": "Layout Style",
     "layoutFlatLay": "Flat-Lay",
@@ -162,12 +172,25 @@
       "work": "Work",
       "street": "Street Style",
       "cozy": "Cozy",
-      "elegant": "Elegant"
+      "elegant": "Elegant",
+      "sporty": "Sporty"
     },
     "genders": {
       "female": "Female",
       "male": "Male"
     },
+    "tryThese": "Try these",
+    "prompts": {
+      "beachVacation": "Light and breezy outfit for a beach vacation with sandals and a sun hat",
+      "jobInterview": "Professional look for a job interview with a blazer and dress shoes",
+      "coffeeDate": "Cute and casual outfit for a coffee date with layered accessories",
+      "weekendBrunch": "Chic weekend brunch look with a flowy dress and statement earrings",
+      "gymSession": "Athletic wear for the gym with sneakers and a comfortable hoodie",
+      "movieNight": "Cozy outfit for a movie night at home with soft sweater and joggers",
+      "streetStyle": "Trendy streetwear look with sneakers, cargo pants and oversized jacket",
+      "officeDay": "Smart casual office outfit with chinos and a crisp button-down shirt"
+    },
+    "previewPlaceholder": "Click a prompt or write your own to generate",
     "tryOn": {
       "title": "Virtual Try-On",
       "description": "See yourself wearing any outfit",

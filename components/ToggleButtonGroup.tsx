@@ -50,7 +50,7 @@ export default function ToggleButtonGroup<T extends string>({
               isActive
                 ? "bg-foreground text-background"
                 : "text-muted-foreground hover:text-foreground"
-            } ${disabled ? "cursor-not-allowed" : ""}`}
+            } ${disabled ? "opacity-60" : ""}`}
           >
             {option.icon}
             {option.label}

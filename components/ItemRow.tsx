@@ -7,7 +7,7 @@ import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 export type BaseItem = {
   id: string;
   name: string;
-  image_url: string;
+  image_url: string | null;
 };
 
 interface ItemRowProps<T extends BaseItem> {
@@ -69,7 +69,9 @@ export default function ItemRow<T extends BaseItem>({
     }
   };
 
-  if (items.length === 0) return null;
+  // Filter out items without images
+const validItems = items.filter((item) => item.image_url);
+if (validItems.length === 0) return null;
 
   const handleSelect = (item: T) => {
     if (multiSelect && onMultiSelect) {
@@ -98,14 +100,14 @@ export default function ItemRow<T extends BaseItem>({
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {title}
         </span>
-        <span className="text-xs text-muted-foreground/50">{items.length}</span>
+        <span className="text-xs text-muted-foreground/50">{validItems.length}</span>
       </div>
       <div className="relative group">
         <div
           ref={scrollRef}
           className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory"
         >
-          {items.map((item) => {
+          {validItems.map((item) => {
             const isSelected = isItemSelected(item);
             return (
               <button
@@ -115,14 +117,14 @@ export default function ItemRow<T extends BaseItem>({
                 disabled={disabled}
                 className={`relative flex-shrink-0 w-[76px] h-[76px] sm:w-[88px] sm:h-[88px] lg:w-24 lg:h-24 rounded-xl overflow-hidden snap-start transition-all duration-200 ${
                   disabled
-                    ? "opacity-50 cursor-not-allowed"
+                    ? "opacity-50"
                     : isSelected
                     ? "ring-2 ring-white ring-offset-2 ring-offset-background scale-[1.02]"
                     : "hover:scale-[1.02] opacity-80 hover:opacity-100"
                 }`}
               >
                 <Image
-                  src={item.image_url}
+                  src={item.image_url!}
                   alt={item.name}
                   fill
                   className="object-cover"

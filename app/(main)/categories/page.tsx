@@ -253,7 +253,7 @@ export default function CategoriesPage() {
                           type="button"
                           onClick={() => submitAdd(dbValue)}
                           disabled={!newName.trim() || submitting}
-                          className="flex-1 h-10 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                          className="flex-1 h-10 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                         >
                           {submitting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />

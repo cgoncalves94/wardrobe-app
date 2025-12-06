@@ -20,7 +20,7 @@
   },
   "nav": {
     "home": "Início",
-    "items": "Peças",
+    "items": "Guarda-Roupa",
     "outfits": "Looks",
     "categories": "Categorias",
     "addItem": "Adicionar Peça",
@@ -58,6 +58,13 @@
     "myWardrobeDescription": "Ver todas as peças",
     "uploadClothes": "Enviar roupas",
     "organizeItems": "Organizar peças",
+    "howItWorks": "Como funciona",
+    "step1Title": "Envie suas roupas",
+    "step1Description": "Tire fotos das suas peças e adicione ao seu guarda-roupa digital",
+    "step2Title": "Organize por categoria",
+    "step2Description": "Separe em tops, calças, acessórios e mais para facilitar a busca",
+    "step3Title": "Gere looks",
+    "step3Description": "Deixe a IA criar combinações estilosas ou experimente looks virtualmente",
     "features": "Recursos",
     "aiOutfitGenerator": "Gerador de Looks com IA",
     "mixMatch": "Combine com IA",
@@ -67,7 +74,8 @@
     "virtualTryOnDescription": "Envie sua foto e veja como você ficaria usando diferentes looks do seu guarda-roupa."
   },
   "items": {
-    "title": "Todas as Peças",
+    "title": "Meu Guarda-Roupa",
+    "description": "Navegue e organize sua coleção de roupas",
     "addItem": "Adicionar Peça",
     "addItemDescription": "Adicione uma nova peça ao seu guarda-roupa",
     "name": "Nome",
@@ -113,15 +121,17 @@
     "loadingWardrobe": "Carregando seu guarda-roupa...",
     "selectItemsDescription": "Selecione peças e deixe a IA estilizá-las",
     "tabs": {
-      "fromItems": "Das Peças",
+      "fromItems": "Do Guarda-Roupa",
       "aiPicks": "IA Escolhe"
     },
-    "occasionLabel": "Qual é a ocasião?",
-    "occasionPlaceholder": "ex., entrevista de emprego, brunch de fim de semana, encontro...",
-    "aiPicksDescription": "Descreva a ocasião e deixe a IA gerar o look perfeito",
-    "enterOccasion": "Por favor, descreva a ocasião",
-    "enterOccasionToStart": "Descreva a ocasião para começar",
+    "itemsDescriptionLabel": "Descreva seu look",
+    "itemsDescriptionHelper": "Quais peças você quer no seu look?",
+    "itemsDescriptionPlaceholder": "ex., calça jeans azul com tênis branco, vestido floral...",
+    "aiPicksDescription": "Descreva seu look e deixe a IA gerar a combinação perfeita",
+    "enterItemsDescription": "Por favor, descreva as peças que você quer",
+    "enterItemsDescriptionToStart": "Descreva seu look para começar",
     "style": "Estilo",
+    "styleHelper": "Escolha o estilo do seu look",
     "displayOnMannequin": "Exibir em manequim",
     "layoutMode": "Estilo de Layout",
     "layoutFlatLay": "Vista Plana",
@@ -162,12 +172,25 @@
       "work": "Trabalho",
       "street": "Streetwear",
       "cozy": "Confortável",
-      "elegant": "Elegante"
+      "elegant": "Elegante",
+      "sporty": "Esportivo"
     },
     "genders": {
       "female": "Feminino",
       "male": "Masculino"
     },
+    "tryThese": "Experimente",
+    "prompts": {
+      "beachVacation": "Look leve e fresco para férias na praia com sandálias e chapéu de sol",
+      "jobInterview": "Visual profissional para entrevista de emprego com blazer e sapatos sociais",
+      "coffeeDate": "Look fofo e casual para um encontro no café com acessórios em camadas",
+      "weekendBrunch": "Look chique de fim de semana com vestido fluido e brincos statement",
+      "gymSession": "Roupa esportiva para academia com tênis e moletom confortável",
+      "movieNight": "Look aconchegante para noite de cinema em casa com suéter macio e calça de moletom",
+      "streetStyle": "Visual streetwear descolado com tênis, calça cargo e jaqueta oversized",
+      "officeDay": "Look smart casual para o escritório com calça chino e camisa social"
+    },
+    "previewPlaceholder": "Clique em um exemplo ou escreva o seu para gerar",
     "tryOn": {
       "title": "Provador Virtual",
       "description": "Veja-se vestindo qualquer look",

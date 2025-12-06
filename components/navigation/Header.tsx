@@ -31,7 +31,7 @@ export default function Header({ currentLocale }: Props) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/95 backdrop-blur-sm">
-      <div className="mx-auto max-w-[1400px] flex items-center justify-between px-4 sm:px-6 py-4">
+      <div className="mx-auto max-w-[1800px] flex items-center justify-between px-4 sm:px-6 lg:px-12 py-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
           <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center">

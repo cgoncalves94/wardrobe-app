@@ -6,7 +6,7 @@ import { Check, ChevronDown, X, type LucideIcon } from "lucide-react";
 type ItemSummary = {
   id: string;
   name: string;
-  image_url: string;
+  image_url: string | null;
 };
 
 type Labels = {
@@ -48,7 +48,7 @@ export default function ItemSection<T extends ItemSummary>({
         <div className="flex items-center gap-3 p-3">
           <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary flex-shrink-0 relative">
             <Image
-              src={selected.image_url}
+              src={selected.image_url!}
               alt={selected.name}
               fill
               className="object-cover"
@@ -118,7 +118,7 @@ export default function ItemSection<T extends ItemSummary>({
                   className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-foreground/30 transition-all hover:scale-105"
                 >
                   <Image
-                    src={item.image_url}
+                    src={item.image_url!}
                     alt={item.name}
                     fill
                     className="object-cover"

@@ -172,7 +172,7 @@ export default function NewItemPage() {
             type="button"
             onClick={save}
             disabled={!name || !categoryId || saving}
-            className="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 transition-all"
           >
             {saving ? (
               <>
