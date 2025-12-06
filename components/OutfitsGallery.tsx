@@ -9,8 +9,9 @@ import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt, ChevronLeft, ChevronRigh
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
-/** Number of outfits to show per page in the grid (divisible by 1, 2, 3 columns) */
-const OUTFITS_PER_PAGE = 12;
+/** Responsive page sizes: 6 for 1-col mobile, 12 for 2-4 col desktop (3 rows of 4) */
+const OUTFITS_PER_PAGE_MOBILE = 6;
+const OUTFITS_PER_PAGE_DESKTOP = 12;
 
 /** Outfit data for gallery display */
 export type Outfit = {
@@ -39,6 +40,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   const [tryons, setTryons] = useState<Outfit[]>(initialTryons);
   const [activeTab, setActiveTab] = useState<TabType>(tabParam === "tryons" ? "tryons" : "outfits");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [outfitsPerPage, setOutfitsPerPage] = useState(OUTFITS_PER_PAGE_DESKTOP);
   const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
@@ -56,12 +58,12 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   // Paginated items for current page
   const paginatedItems = useMemo(() => {
     return filteredItems.slice(
-      currentPage * OUTFITS_PER_PAGE,
-      (currentPage + 1) * OUTFITS_PER_PAGE
+      currentPage * outfitsPerPage,
+      (currentPage + 1) * outfitsPerPage
     );
-  }, [filteredItems, currentPage]);
+  }, [filteredItems, currentPage, outfitsPerPage]);
 
-  const totalPages = Math.ceil(filteredItems.length / OUTFITS_PER_PAGE);
+  const totalPages = Math.ceil(filteredItems.length / outfitsPerPage);
 
   const supabase = createClient();
   const t = useTranslations();
@@ -77,6 +79,17 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
+
+  // Responsive pagination - sync with grid breakpoint (sm: 640px)
+  useEffect(() => {
+    function updatePageSize() {
+      const isDesktop = window.innerWidth >= 640;
+      setOutfitsPerPage(isDesktop ? OUTFITS_PER_PAGE_DESKTOP : OUTFITS_PER_PAGE_MOBILE);
+    }
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
 
   async function handleDelete(outfit: Outfit) {
     if (!confirm(t('outfits.deleteConfirm', { name: outfit.name }))) return;
@@ -282,7 +295,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
         </div>
       ) : filteredItems.length > 0 ? (
         <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {paginatedItems.map((outfit) => (
           <button
             key={outfit.id}

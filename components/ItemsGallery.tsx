@@ -10,8 +10,9 @@ import { toast } from "@/components/ui/sonner";
 import CategoryDropdown from "@/components/CategoryDropdown";
 import type { CategoryRoot } from "@/lib/categories";
 
-/** Number of items to show per page in the grid */
-const ITEMS_PER_PAGE = 12;
+/** Responsive page sizes: 6 for 1-col mobile, 12 for 2-4 col desktop */
+const ITEMS_PER_PAGE_MOBILE = 6;
+const ITEMS_PER_PAGE_DESKTOP = 12;
 
 /** Item data for gallery display */
 export type GalleryItem = {
@@ -48,6 +49,7 @@ export default function ItemsGallery({
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState(ITEMS_PER_PAGE_DESKTOP);
   const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
@@ -67,6 +69,17 @@ export default function ItemsGallery({
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [open]);
+
+  // Responsive pagination - sync with grid breakpoint (sm: 640px)
+  useEffect(() => {
+    function updatePageSize() {
+      const isDesktop = window.innerWidth >= 640;
+      setItemsPerPage(isDesktop ? ITEMS_PER_PAGE_DESKTOP : ITEMS_PER_PAGE_MOBILE);
+    }
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
 
   const setCategory = (id: string | null) => {
     if (onSelectCategory) onSelectCategory(id);
@@ -89,12 +102,12 @@ export default function ItemsGallery({
   // Paginated items for current page
   const paginatedItems = useMemo(() => {
     return filteredItems.slice(
-      currentPage * ITEMS_PER_PAGE,
-      (currentPage + 1) * ITEMS_PER_PAGE
+      currentPage * itemsPerPage,
+      (currentPage + 1) * itemsPerPage
     );
-  }, [filteredItems, currentPage]);
+  }, [filteredItems, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
   async function handleDelete(item: GalleryItem) {
     if (!confirm(t('items.deleteConfirm', { name: item.name }))) return;

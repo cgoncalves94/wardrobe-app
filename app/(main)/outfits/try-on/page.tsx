@@ -41,8 +41,9 @@ import { isProRoute } from "@/lib/features";
 
 type SelectionMode = "items" | "outfits";
 
-/** Number of outfits to show per page in the grid (divisible by 2 and 3 columns) */
-const OUTFITS_PER_PAGE = 12;
+/** Responsive page sizes: 8 for 2-col mobile (2x4), 9 for 3-col desktop (3x3) */
+const OUTFITS_PER_PAGE_MOBILE = 8;
+const OUTFITS_PER_PAGE_DESKTOP = 9;
 
 /**
  * Virtual try-on page component
@@ -69,7 +70,8 @@ export default function TryOnPage() {
   // Selected outfit (for outfits mode)
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
 
-  // Pagination for saved outfits
+  // Responsive pagination - matches grid breakpoint (sm: 640px)
+  const [outfitsPerPage, setOutfitsPerPage] = useState(OUTFITS_PER_PAGE_DESKTOP);
   const [outfitPage, setOutfitPage] = useState(0);
 
   // Generation state
@@ -104,6 +106,17 @@ export default function TryOnPage() {
       };
     }
   }, [generatedImage, generating]);
+
+  // Responsive pagination - sync with grid breakpoint (sm: 640px)
+  useEffect(() => {
+    function updatePageSize() {
+      const isDesktop = window.innerWidth >= 640;
+      setOutfitsPerPage(isDesktop ? OUTFITS_PER_PAGE_DESKTOP : OUTFITS_PER_PAGE_MOBILE);
+    }
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -554,10 +567,10 @@ export default function TryOnPage() {
                         <span className="text-xs text-muted-foreground/50">{savedOutfits.length}</span>
                       </div>
 
-                      {/* Grid - 2x3 on mobile, 3x2 on larger screens */}
+                      {/* Grid - 2x5 on mobile, 3x3 on larger screens */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {savedOutfits
-                          .slice(outfitPage * OUTFITS_PER_PAGE, (outfitPage + 1) * OUTFITS_PER_PAGE)
+                          .slice(outfitPage * outfitsPerPage, (outfitPage + 1) * outfitsPerPage)
                           .map((outfit) => {
                             const isSelected = selectedOutfit?.id === outfit.id;
                             return (
@@ -598,7 +611,7 @@ export default function TryOnPage() {
                       </div>
 
                       {/* Pagination controls */}
-                      {savedOutfits.length > OUTFITS_PER_PAGE && (
+                      {savedOutfits.length > outfitsPerPage && (
                         <div className="flex items-center justify-between pt-2">
                           <button
                             type="button"
@@ -610,12 +623,12 @@ export default function TryOnPage() {
                             {t("common.previous")}
                           </button>
                           <span className="text-xs text-muted-foreground">
-                            {outfitPage + 1} / {Math.ceil(savedOutfits.length / OUTFITS_PER_PAGE)}
+                            {outfitPage + 1} / {Math.ceil(savedOutfits.length / outfitsPerPage)}
                           </span>
                           <button
                             type="button"
-                            onClick={() => setOutfitPage((p) => Math.min(Math.ceil(savedOutfits.length / OUTFITS_PER_PAGE) - 1, p + 1))}
-                            disabled={outfitPage >= Math.ceil(savedOutfits.length / OUTFITS_PER_PAGE) - 1 || isLocked}
+                            onClick={() => setOutfitPage((p) => Math.min(Math.ceil(savedOutfits.length / outfitsPerPage) - 1, p + 1))}
+                            disabled={outfitPage >= Math.ceil(savedOutfits.length / outfitsPerPage) - 1 || isLocked}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
                           >
                             {t("common.next")}
