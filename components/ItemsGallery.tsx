@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/sonner";
 import CategoryDropdown from "@/components/CategoryDropdown";
 import type { CategoryRoot } from "@/lib/categories";
 
+/** Item data for gallery display */
 export type GalleryItem = {
   id: string;
   name: string;
@@ -20,6 +21,7 @@ export type GalleryItem = {
   created_at?: string | null;
 };
 
+/** Category data for filtering */
 export type GalleryCategory = {
   id: string;
   name: string;
@@ -32,6 +34,9 @@ type Props = {
   onSelectCategory?: (id: string | null) => void;
 };
 
+/**
+ * Filterable gallery grid for wardrobe items with lightbox and favorites
+ */
 export default function ItemsGallery({
   items: initialItems,
   categories,
@@ -48,7 +53,6 @@ export default function ItemsGallery({
   const t = useTranslations();
   const format = useFormatter();
 
-  // Close lightbox with Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {

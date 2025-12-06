@@ -10,6 +10,9 @@ import { ArrowLeft, Loader2, ChevronDown, Check } from 'lucide-react';
 import { ROOT_CONFIG } from '@/lib/categories';
 import { useClickOutside } from '@/hooks/use-click-outside';
 
+/**
+ * Form page for adding a new wardrobe item with image upload
+ */
 export default function NewItemPage() {
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');

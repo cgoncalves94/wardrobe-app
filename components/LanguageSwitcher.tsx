@@ -9,6 +9,9 @@ type Props = {
   currentLocale: Locale;
 };
 
+/**
+ * Inline language switcher for toggling between locales
+ */
 export default function LanguageSwitcher({ currentLocale }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

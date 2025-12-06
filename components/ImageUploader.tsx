@@ -12,6 +12,9 @@ type Props = {
   imageUrl?: string;
 };
 
+/**
+ * Drag-and-drop image uploader with Supabase storage integration
+ */
 export default function ImageUploader({ bucket, folder, onUploaded, imageUrl }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -58,7 +61,6 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl }: 
     }
   }
 
-  // Show image preview when uploaded
   if (imageUrl && !uploading && !error) {
     return (
       <div

@@ -5,6 +5,10 @@ import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
 import { fetchImageAsBase64 } from "@/lib/images";
 
+/**
+ * Generate outfit image via Gemini AI
+ * Supports two modes: From Items (compose from wardrobe) or AI Picks (text-to-image)
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -15,7 +19,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check Pro subscription (only if feature is Pro-gated)
     if (isProRoute("/outfits/generate")) {
       const userIsPro = await isProUser();
       if (!userIsPro) {
@@ -31,9 +34,7 @@ export async function POST(request: NextRequest) {
 
     let result: { imageBase64: string; prompt: string };
 
-    // Detect mode: AI Picks (has itemsDescription) vs From Items (has item IDs)
     if (itemsDescription) {
-      // AI Picks mode - pure text-to-image generation
       if (!style) {
         return NextResponse.json({ error: "Style is required for AI-generated outfits" }, { status: 400 });
       }
@@ -45,7 +46,6 @@ export async function POST(request: NextRequest) {
         mannequinGender: mannequinGender as MannequinGender,
       });
     } else {
-      // From Items mode - compose from wardrobe items
       const itemIds = [headwearItemId, topItemId, bottomItemId, fullBodyItemId, footwearItemId, ...(accessoryIds || [])].filter(Boolean);
 
       if (itemIds.length === 0) {
@@ -61,7 +61,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Failed to fetch items" }, { status: 500 });
       }
 
-      // Convert image URLs to base64
       const imageMap: Record<string, string> = {};
 
       for (const item of items || []) {
@@ -73,7 +72,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Validate that we have at least one valid image
       if (Object.keys(imageMap).length === 0) {
         return NextResponse.json(
           { error: "Could not load any item images. Please check your wardrobe items." },
@@ -81,7 +79,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Generate outfit image from items (no style param - removed)
       result = await generateOutfitImage({
         headwearImageBase64: headwearItemId ? imageMap[headwearItemId] : undefined,
         topImageBase64: topItemId ? imageMap[topItemId] : undefined,
@@ -94,7 +91,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Upload generated image to Supabase Storage
     const fileName = `outfit-${Date.now()}.jpg`;
     const imageBuffer = Buffer.from(result.imageBase64, "base64");
 
@@ -127,7 +123,6 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Failed to generate outfit";
     const errorWithStatus = error as { status?: number };
 
-    // Handle rate limit errors
     if (errorWithStatus.status === 429 || message.includes("429") || message.includes("quota")) {
       return NextResponse.json(
         { error: "Rate limit reached. Please wait 30 seconds and try again." },

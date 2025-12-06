@@ -7,6 +7,9 @@ import { Trash2, Loader2, Plus, ChevronDown } from 'lucide-react';
 import { ROOT_CONFIG, getRootIcon } from '@/lib/categories';
 import type { CategoryRow } from '@/types';
 
+/**
+ * Category management page with accordion sections for each root type
+ */
 export default function CategoriesPage() {
   const [cats, setCats] = useState<CategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +34,6 @@ export default function CategoriesPage() {
       .order('name');
     setCats(data || []);
 
-    // Auto-expand sections that have categories
     if (data && data.length > 0) {
       const rootsWithCategories = new Set(data.map(c => c.root));
       setExpandedSections(rootsWithCategories);
@@ -41,14 +43,12 @@ export default function CategoriesPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Focus input when adding mode is activated
   useEffect(() => {
     if (addingTo && inputRef.current) {
       inputRef.current.focus();
     }
   }, [addingTo]);
 
-  // Group categories by root
   const categoriesByRoot = ROOT_CONFIG.reduce((acc, { dbValue }) => {
     acc[dbValue] = cats.filter(c => c.root === dbValue);
     return acc;
@@ -69,7 +69,6 @@ export default function CategoriesPage() {
   function startAdding(root: string) {
     setAddingTo(root);
     setNewName('');
-    // Ensure section is expanded
     setExpandedSections(prev => new Set(prev).add(root));
   }
 

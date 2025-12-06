@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { ROOT_CONFIG, type CategoryRoot } from "@/lib/categories";
 
+/** Category option for dropdown selection */
 export type CategoryOption = {
   id: string;
   name: string;
@@ -22,6 +23,9 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Dropdown for selecting a category, grouped by root type
+ */
 export default function CategoryDropdown({
   categories,
   selectedId,
@@ -39,7 +43,6 @@ export default function CategoryDropdown({
     isOpen
   );
 
-  // Group categories by root
   const categoriesByRoot = useMemo(() => {
     const grouped = new Map<string, CategoryOption[]>();
     for (const cat of categories) {
@@ -49,7 +52,6 @@ export default function CategoryDropdown({
     return grouped;
   }, [categories]);
 
-  // Get selected category name for display
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === selectedId),
     [selectedId, categories]
@@ -94,7 +96,6 @@ export default function CategoryDropdown({
             </button>
           )}
 
-          {/* Categories grouped by root */}
           {ROOT_CONFIG.map((rootConfig) => {
             const rootCategories = categoriesByRoot.get(rootConfig.dbValue);
             if (!rootCategories || rootCategories.length === 0) return null;

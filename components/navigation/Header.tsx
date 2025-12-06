@@ -15,6 +15,9 @@ type Props = {
   currentLocale: Locale;
 };
 
+/**
+ * Main header with navigation links and settings dropdown
+ */
 export default function Header({ currentLocale }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const dropdownRef = useClickOutside<HTMLDivElement>(
@@ -25,7 +28,6 @@ export default function Header({ currentLocale }: Props) {
   const t = useTranslations();
   const handleLogout = useLogout();
 
-  // Check if a nav link is active (exact match for home, startsWith for others)
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 

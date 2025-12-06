@@ -8,6 +8,7 @@ import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
+/** Outfit data for gallery display */
 export type Outfit = {
   id: string;
   name: string;
@@ -23,6 +24,9 @@ type Props = {
   tryons?: Outfit[];
 };
 
+/**
+ * Tabbed gallery for generated outfits and try-ons with favorites and lightbox
+ */
 export default function OutfitsGallery({ outfits: initialOutfits, tryons: initialTryons = [] }: Props) {
   const [outfits, setOutfits] = useState<Outfit[]>(initialOutfits);
   const [tryons, setTryons] = useState<Outfit[]>(initialTryons);
@@ -32,7 +36,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Get active list based on tab
   const activeList = activeTab === "outfits" ? outfits : tryons;
   const setActiveList = activeTab === "outfits" ? setOutfits : setTryons;
 
@@ -47,7 +50,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   const t = useTranslations();
   const format = useFormatter();
 
-  // Close with Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -146,7 +148,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
     }
   }
 
-  // Empty state when both lists are empty
   if (outfits.length === 0 && tryons.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
@@ -169,9 +170,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
 
   return (
     <div className="space-y-5">
-      {/* Unified filter bar: Tabs + Favorites toggle */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Tabs */}
         <button
           type="button"
           onClick={() => {
@@ -217,7 +216,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
           )}
         </button>
 
-        {/* Favorites toggle */}
         {activeList.length > 0 && (
           <>
             <div className="w-px h-6 bg-border mx-1" />
@@ -238,7 +236,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
         )}
       </div>
 
-      {/* Content */}
       {activeList.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
           <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">
@@ -317,7 +314,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
         </div>
       )}
 
-      {/* Lightbox */}
       {open && selectedOutfit && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
@@ -332,7 +328,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
             className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
             <button
               type="button"
               onClick={() => {
@@ -345,7 +340,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
               <X className="w-6 h-6" />
             </button>
 
-            {/* Image */}
             {selectedOutfit.generated_image_url && (
               <Image
                 src={selectedOutfit.generated_image_url}
@@ -357,7 +351,6 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
               />
             )}
 
-            {/* Info bar */}
             <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-4 rounded-xl bg-white/10 backdrop-blur-md p-4">
               <div className="min-w-0">
                 <h3 className="font-medium text-white truncate">

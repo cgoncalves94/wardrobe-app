@@ -6,6 +6,9 @@ import { useTranslations } from "next-intl";
 import { Home, Shirt, Sparkles, FolderOpen, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Fixed bottom navigation bar for mobile devices
+ */
 export default function BottomNav() {
   const pathname = usePathname();
   const t = useTranslations();

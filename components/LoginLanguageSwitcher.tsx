@@ -5,6 +5,9 @@ import { useTransition, useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import { locales, localeConfig, defaultLocale, type Locale } from "@/i18n/config";
 
+/**
+ * Language switcher for unauthenticated pages (reads locale from cookie)
+ */
 export default function LoginLanguageSwitcher() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();

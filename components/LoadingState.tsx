@@ -6,6 +6,9 @@ interface LoadingStateProps {
   message: string;
 }
 
+/**
+ * Centered loading indicator with customizable message
+ */
 export default function LoadingState({ message }: LoadingStateProps) {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">

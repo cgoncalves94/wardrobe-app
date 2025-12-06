@@ -8,6 +8,9 @@ type Props = {
   featureKey: "generate" | "tryOn";
 };
 
+/**
+ * Full-page blocker for Pro-only features with upgrade CTA
+ */
 export default function ProFeatureGate({ featureKey }: Props) {
   const t = useTranslations();
 

@@ -1,3 +1,6 @@
+/**
+ * Virtual try-on page for applying outfits to user photos via AI
+ */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -34,6 +37,9 @@ import { isProRoute } from "@/lib/features";
 
 type SelectionMode = "items" | "outfits";
 
+/**
+ * Virtual try-on page component
+ */
 export default function TryOnPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [savedOutfits, setOutfits] = useState<Outfit[]>([]);

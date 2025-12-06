@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { Check, ChevronDown, X, type LucideIcon } from "lucide-react";
 
+/** Minimal item data required for section display */
 type ItemSummary = {
   id: string;
   name: string;
   image_url: string | null;
 };
 
+/** Localized labels for section UI */
 type Labels = {
   itemsAvailable: (count: number) => string;
   noItemsInCategory: string;
@@ -28,6 +30,9 @@ type ItemSectionProps<T extends ItemSummary> = {
   labels: Labels;
 };
 
+/**
+ * Expandable section for selecting a single item with preview and clear functionality
+ */
 export default function ItemSection<T extends ItemSummary>({
   id,
   title,
@@ -41,7 +46,6 @@ export default function ItemSection<T extends ItemSummary>({
 }: ItemSectionProps<T>) {
   const isExpanded = expandedSection === id;
 
-  // When selected, show static header with clear button
   if (selected) {
     return (
       <div className="border border-border rounded-lg overflow-hidden">
@@ -77,7 +81,6 @@ export default function ItemSection<T extends ItemSummary>({
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      {/* Header - clickable when no selection */}
       <button
         type="button"
         onClick={() => onExpandedChange(isExpanded ? null : id)}
@@ -97,7 +100,6 @@ export default function ItemSection<T extends ItemSummary>({
         />
       </button>
 
-      {/* Expandable grid */}
       {isExpanded && !selected && (
         <div className="border-t border-border p-3 bg-secondary/30">
           {items.length === 0 ? (

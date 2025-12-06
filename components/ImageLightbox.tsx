@@ -11,6 +11,9 @@ interface ImageLightboxProps {
   closeLabel: string;
 }
 
+/**
+ * Full-screen image lightbox overlay
+ */
 export default function ImageLightbox({
   src,
   alt,

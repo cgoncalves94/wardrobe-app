@@ -1,3 +1,8 @@
+/**
+ * Fetch an image from URL and convert to base64 (server-side)
+ * @param url - Image URL to fetch
+ * @param contextLabel - Optional label for error logging
+ */
 export async function fetchImageAsBase64(url: string, contextLabel?: string): Promise<string | null> {
   try {
     const response = await fetch(url);

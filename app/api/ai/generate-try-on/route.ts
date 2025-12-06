@@ -5,6 +5,10 @@ import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
 import { fetchImageAsBase64 } from "@/lib/images";
 
+/**
+ * Generate virtual try-on image via Gemini AI
+ * Supports using individual wardrobe items or a saved outfit image
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -15,7 +19,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check Pro subscription (only if feature is Pro-gated)
     if (isProRoute("/outfits/try-on")) {
       const userIsPro = await isProUser();
       if (!userIsPro) {
@@ -42,7 +45,6 @@ export async function POST(request: NextRequest) {
     const clothingImagesBase64: string[] = [];
     let finalDescription = outfitDescription || "";
 
-    // Mode 1: Using individual items
     if (itemIds && itemIds.length > 0) {
       // Fetch item images from database
       const { data: items, error: itemsError } = await supabase
@@ -66,13 +68,11 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Build outfit description from item names if not provided
       if (!finalDescription) {
         finalDescription = itemNames.join(", ");
       }
     }
 
-    // Mode 2: Using a saved outfit image
     if (outfitImageUrl) {
       const base64 = await fetchImageAsBase64(outfitImageUrl, "outfit image");
       if (!base64) {
@@ -88,14 +88,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate try-on image
     const result = await generateTryOnImage({
       userPhotoBase64,
       outfitDescription: finalDescription,
       clothingImagesBase64,
     });
 
-    // Upload generated image to Supabase Storage
     const fileName = `tryon-${Date.now()}.jpg`;
     const imageBuffer = Buffer.from(result.imageBase64, "base64");
 
@@ -128,7 +126,6 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Failed to generate try-on";
     const errorWithStatus = error as { status?: number };
 
-    // Handle rate limit errors
     if (errorWithStatus.status === 429 || message.includes("429") || message.includes("quota")) {
       return NextResponse.json(
         { error: "Rate limit reached. Please wait 30 seconds and try again." },

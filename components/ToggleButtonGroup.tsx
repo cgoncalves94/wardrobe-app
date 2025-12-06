@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 
+/** Single option in a toggle group */
 interface ToggleOption<T extends string> {
   value: T;
   label: string;
@@ -17,6 +18,9 @@ interface ToggleButtonGroupProps<T extends string> {
   stretch?: boolean;
 }
 
+/**
+ * Mutually exclusive button group for selecting between options
+ */
 export default function ToggleButtonGroup<T extends string>({
   options,
   value,

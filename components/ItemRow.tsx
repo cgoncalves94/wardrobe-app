@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 
+/** Base item type with required fields for display */
 export type BaseItem = {
   id: string;
   name: string;
@@ -22,6 +23,9 @@ interface ItemRowProps<T extends BaseItem> {
   disabled?: boolean;
 }
 
+/**
+ * Horizontal scrollable row of selectable items with single or multi-select
+ */
 export default function ItemRow<T extends BaseItem>({
   title,
   items,
@@ -69,8 +73,7 @@ export default function ItemRow<T extends BaseItem>({
     }
   };
 
-  // Filter out items without images
-const validItems = items.filter((item) => item.image_url);
+  const validItems = items.filter((item) => item.image_url);
 if (validItems.length === 0) return null;
 
   const handleSelect = (item: T) => {

@@ -1,3 +1,6 @@
+/**
+ * Outfit generation page with two modes: From Items (compose from wardrobe) and AI Picks (text-to-image)
+ */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -45,7 +48,6 @@ import { isProRoute } from "@/lib/features";
 
 type TabType = "fromItems" | "aiPicks";
 
-// Style icons mapping
 const STYLE_ICONS: Record<OutfitStyle, LucideIcon> = {
   casual: Shirt,
   formal: Briefcase,

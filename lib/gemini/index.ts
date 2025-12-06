@@ -1,16 +1,19 @@
-// Server-only module - do not import in client components
+/**
+ * Server-only module - do not import in client components
+ */
 import { GoogleGenAI } from "@google/genai";
 import type { OutfitStyle, MannequinGender } from "./types";
 
-// Initialize the Gemini client (server-side only)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-// Error type for SDK errors with status codes
+/** SDK error with optional HTTP status code */
 interface SdkError extends Error {
   status?: number;
 }
 
-// Retry helper with exponential backoff for 429 rate limit errors
+/**
+ * Retry helper with exponential backoff for 429 rate limit errors
+ */
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -50,9 +53,9 @@ async function withRetry<T>(
   throw lastError;
 }
 
-// Re-export types for API routes
 export type { OutfitStyle, MannequinGender } from "./types";
 
+/** Options for generating outfit from wardrobe items */
 interface GenerateOutfitOptions {
   headwearImageBase64?: string;
   topImageBase64?: string;
@@ -64,6 +67,7 @@ interface GenerateOutfitOptions {
   mannequinGender?: MannequinGender;
 }
 
+/** Options for virtual try-on generation */
 interface TryOnOptions {
   userPhotoBase64: string;
   outfitDescription: string;
@@ -189,6 +193,7 @@ Each garment preserves its exact appearance from the reference. Every piece laid
   };
 }
 
+/** Options for AI Picks text-to-image generation */
 interface GenerateFromPromptOptions {
   itemsDescription: string;
   style: OutfitStyle;

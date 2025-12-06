@@ -10,6 +10,9 @@ type Props = {
   className?: string;
 };
 
+/**
+ * Logout button with icon and localized label
+ */
 export default function LogoutButton({ className }: Props) {
   const t = useTranslations("nav");
   const handleLogout = useLogout();
