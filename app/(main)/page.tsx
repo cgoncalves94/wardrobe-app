@@ -65,7 +65,6 @@ export default async function Home() {
             <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-foreground/10 flex items-center justify-center mb-3 md:mb-4">
               <Camera className="w-6 h-6 md:w-7 md:h-7 text-foreground/70" />
             </div>
-            <div className="text-sm font-medium text-muted-foreground mb-1 md:mb-2">1</div>
             <h3 className="font-medium mb-1 md:mb-2">{t("step1Title")}</h3>
             <p className="text-sm text-muted-foreground">{t("step1Description")}</p>
           </div>
@@ -73,7 +72,6 @@ export default async function Home() {
             <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-foreground/10 flex items-center justify-center mb-3 md:mb-4">
               <FolderOpen className="w-6 h-6 md:w-7 md:h-7 text-foreground/70" />
             </div>
-            <div className="text-sm font-medium text-muted-foreground mb-1 md:mb-2">2</div>
             <h3 className="font-medium mb-1 md:mb-2">{t("step2Title")}</h3>
             <p className="text-sm text-muted-foreground">{t("step2Description")}</p>
           </div>
@@ -81,7 +79,6 @@ export default async function Home() {
             <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-foreground/10 flex items-center justify-center mb-3 md:mb-4">
               <Wand2 className="w-6 h-6 md:w-7 md:h-7 text-foreground/70" />
             </div>
-            <div className="text-sm font-medium text-muted-foreground mb-1 md:mb-2">3</div>
             <h3 className="font-medium mb-1 md:mb-2">{t("step3Title")}</h3>
             <p className="text-sm text-muted-foreground">{t("step3Description")}</p>
           </div>

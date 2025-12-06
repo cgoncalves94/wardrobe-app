@@ -10,12 +10,14 @@ type Props = {
   folder?: string;
   onUploaded: (path: string, publicUrl: string) => void;
   imageUrl?: string;
+  /** Show full image without cropping (useful for full-body photos) */
+  preserveAspect?: boolean;
 };
 
 /**
  * Drag-and-drop image uploader with Supabase storage integration
  */
-export default function ImageUploader({ bucket, folder, onUploaded, imageUrl }: Props) {
+export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, preserveAspect = false }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,15 +66,18 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl }: 
   if (imageUrl && !uploading && !error) {
     return (
       <div
-        className="relative aspect-square max-w-[280px] rounded-xl overflow-hidden border border-border cursor-pointer group"
+        className={`relative rounded-xl overflow-hidden border border-border cursor-pointer group ${
+          preserveAspect ? "w-fit max-h-[320px]" : "aspect-square max-w-[280px]"
+        }`}
         onClick={() => inputRef.current?.click()}
       >
         <Image
           src={imageUrl}
           alt="Preview"
-          fill
-          className="object-cover"
-          sizes="280px"
+          {...(preserveAspect
+            ? { width: 280, height: 320, className: "object-contain max-h-[320px] w-auto" }
+            : { fill: true, className: "object-cover", sizes: "280px" }
+          )}
         />
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
           <RefreshCw className="w-8 h-8 text-white" />

@@ -608,19 +608,30 @@ export default function GenerateOutfitPage() {
         {/* Right Column - Preview + Action Bar (always visible on desktop) */}
         <div className="hidden lg:flex lg:flex-col lg:gap-4">
           {/* Preview Panel */}
-          <div className="flex-1 min-h-[400px] relative rounded-2xl overflow-hidden bg-secondary/30 border border-border/50">
-            {generating ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-foreground/10 flex items-center justify-center">
-                  <Sparkles className="w-8 h-8 text-foreground/60 animate-pulse" />
+          <div className="flex-1 p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04] flex flex-col min-h-[400px]">
+            {/* Preview Header */}
+            <div className="flex items-center gap-2.5 mb-4">
+              <Wand2 className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("outfits.preview")}
+              </span>
+            </div>
+            {/* Preview Area */}
+            <div className="flex-1 relative rounded-xl overflow-hidden bg-background/40">
+              {generating ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-foreground/10 to-foreground/5 flex items-center justify-center">
+                      <Sparkles className="w-10 h-10 text-foreground/70 animate-pulse" />
+                    </div>
+                    <div className="absolute inset-0 rounded-2xl border-2 border-foreground/10 border-t-foreground/30 animate-spin [animation-duration:2s]" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium">{t("outfits.creatingOutfit")}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t("outfits.generationTime")}</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="font-medium">{t("outfits.creatingOutfit")}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{t("outfits.generationTime")}</p>
-                </div>
-              </div>
-            ) : generatedImage ? (
-              <>
+              ) : generatedImage ? (
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
@@ -634,22 +645,73 @@ export default function GenerateOutfitPage() {
                     className="object-cover"
                     sizes="(max-width: 1024px) 100vw, 50vw"
                   />
+                  {/* Gradient overlay for save controls */}
+                  <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                 </button>
-                {/* Save overlay */}
-                <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                  <input
-                    type="text"
-                    placeholder={t("outfits.nameOutfitPlaceholder")}
-                    value={outfitName}
-                    onChange={(e) => setOutfitName(e.target.value)}
-                    className="w-full h-10 px-4 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm mb-2"
-                  />
-                  <div className="flex gap-2">
+              ) : (
+                <div className="absolute inset-0 flex flex-col">
+                  {/* Fixed selection strip at top - only for fromItems when items selected */}
+                  {activeTab === "fromItems" && hasSelection && (
+                    <div className="flex items-center justify-between gap-3 p-3 border-b border-foreground/[0.06] bg-background/30">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex-shrink-0">
+                        {t("outfits.selected", { count: selectedCount })}
+                      </span>
+                      <div className="flex items-center gap-2 overflow-x-auto flex-1 justify-end">
+                        {allSelected.map((item) => (
+                          <div
+                            key={item.id}
+                            className="relative w-12 h-12 rounded-lg overflow-hidden ring-2 ring-foreground/20 flex-shrink-0"
+                          >
+                            <Image
+                              src={item.image_url!}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={clearAllSelections}
+                          className="w-12 h-12 rounded-lg border border-border/40 flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+                          aria-label={t("aria.clearSelection")}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {/* Center placeholder */}
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center">
+                      <Sparkles className="w-10 h-10 text-muted-foreground/30" />
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center px-4">
+                      {activeTab === "fromItems"
+                        ? (hasSelection ? t("outfits.clickGenerate") : t("outfits.selectItemsToStart"))
+                        : t("outfits.enterItemsDescriptionToStart")}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Save Controls - Overlaid on image when result exists */}
+              {generatedImage && !generating && (
+                <div className="absolute inset-x-0 bottom-0 p-4">
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      placeholder={t("outfits.nameOutfitPlaceholder")}
+                      value={outfitName}
+                      onChange={(e) => setOutfitName(e.target.value)}
+                      className="flex-1 h-11 px-4 rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                    />
                     <button
                       type="button"
                       onClick={handleSave}
                       disabled={saving || !outfitName.trim()}
-                      className="flex-1 h-10 flex items-center justify-center gap-2 rounded-lg bg-white text-black font-medium text-sm hover:bg-white/90 disabled:opacity-50 transition-all"
+                      className="h-11 px-5 flex items-center justify-center gap-2 rounded-xl bg-white text-black font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       {t("outfits.save")}
@@ -659,62 +721,14 @@ export default function GenerateOutfitPage() {
                       onClick={handleGenerate}
                       disabled={generating}
                       aria-label={t("aria.regenerateOutfit")}
-                      className="w-10 h-10 flex items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white hover:bg-white/20 transition-colors"
+                      className="w-11 h-11 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 transition-colors active:scale-[0.98]"
                     >
                       <RefreshCw className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="absolute inset-0 flex flex-col">
-                {/* Fixed selection strip at top - only for fromItems when items selected */}
-                {activeTab === "fromItems" && hasSelection && (
-                  <div className="flex items-center justify-between gap-3 p-3 border-b border-border/30 bg-background/30">
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex-shrink-0">
-                      {t("outfits.selected", { count: selectedCount })}
-                    </span>
-                    <div className="flex items-center gap-2 overflow-x-auto flex-1 justify-end">
-                      {allSelected.map((item) => (
-                        <div
-                          key={item.id}
-                          className="relative w-12 h-12 rounded-lg overflow-hidden ring-1 ring-border/50 flex-shrink-0"
-                        >
-                          <Image
-                            src={item.image_url!}
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                            sizes="48px"
-                          />
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={clearAllSelections}
-                        className="w-12 h-12 rounded-lg border border-border/40 flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
-                        aria-label={t("aria.clearSelection")}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {/* Center placeholder */}
-                <div className="flex-1 flex flex-col items-center justify-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center">
-                    <Sparkles className="w-10 h-10 text-muted-foreground/30" />
-                  </div>
-                  <div className="text-center px-8">
-                    <p className="text-sm text-muted-foreground">
-                      {activeTab === "fromItems"
-                        ? (hasSelection ? t("outfits.clickGenerate") : t("outfits.selectItemsToStart"))
-                        : t("outfits.enterItemsDescriptionToStart")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Desktop Action Bar - inside right column for consistent position */}

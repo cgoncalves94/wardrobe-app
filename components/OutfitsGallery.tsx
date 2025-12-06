@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
 import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -28,9 +29,12 @@ type Props = {
  * Tabbed gallery for generated outfits and try-ons with favorites and lightbox
  */
 export default function OutfitsGallery({ outfits: initialOutfits, tryons: initialTryons = [] }: Props) {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+
   const [outfits, setOutfits] = useState<Outfit[]>(initialOutfits);
   const [tryons, setTryons] = useState<Outfit[]>(initialTryons);
-  const [activeTab, setActiveTab] = useState<TabType>("outfits");
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam === "tryons" ? "tryons" : "outfits");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);

@@ -16,7 +16,9 @@
     "backToHome": "Back to Home",
     "clearFilter": "Clear filter",
     "showFavorites": "Show favorites only",
-    "showingFavorites": "Showing favorites (click to show all)"
+    "showingFavorites": "Showing favorites (click to show all)",
+    "previous": "Previous",
+    "next": "Next"
   },
   "nav": {
     "home": "Home",
@@ -208,6 +210,8 @@
       "step2": "Step 2",
       "tabItems": "Pick Items",
       "tabOutfits": "Use Saved Outfit",
+      "savedOutfits": "Saved Outfits",
+      "noOutfits": "No saved outfits yet",
       "noSavedOutfits": "No saved outfits yet. Generate some outfits first!",
       "selectSavedOutfit": "Select a saved outfit",
       "yourPhoto": "Your Photo",

@@ -300,17 +300,23 @@ export async function generateTryOnImage(options: TryOnOptions): Promise<{
     }
   }
 
-  const prompt = `Change the outfit on this person to match the clothing shown in the reference image(s).
+  const clothingCount = clothingImagesBase64?.length || 0;
+  const clothingRef = clothingCount === 1 ? "item" : `${clothingCount} items`;
 
-Keep the person's face, hair, body, pose, and background EXACTLY the same - only change their clothes.
+  const prompt = `FIRST image = person photo (the BASE).
+Remaining ${clothingRef} = clothing to apply: ${outfitDescription}
 
-Outfit to apply: ${outfitDescription}
+TASK: Replace ONLY the matching clothing on the person. Keep their existing clothes for body parts not covered by the reference items.
 
-Important:
-- Same person, same pose, same location - just different clothes
-- Include ALL items from the outfit: dress/top, bottom, shoes, hat, belt, bag, jewelry if visible
-- Match the lighting on the new clothes to the scene
-- Natural, realistic result - clothes should look worn, not pasted`;
+Example: If reference shows only shoes, change only the shoes - keep the person's existing shirt/pants.
+
+CRITICAL:
+- Output same dimensions/aspect ratio as person photo
+- Same person, pose, background, lighting
+- If feet visible in person photo, feet MUST be visible in output
+- DO NOT zoom, crop, or reframe
+
+Output = person photo with the reference clothing applied.`;
 
   parts.push({ text: prompt });
 

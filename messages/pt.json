@@ -16,7 +16,9 @@
     "backToHome": "Voltar ao Início",
     "clearFilter": "Limpar filtro",
     "showFavorites": "Mostrar apenas favoritos",
-    "showingFavorites": "Mostrando favoritos (clique para ver todos)"
+    "showingFavorites": "Mostrando favoritos (clique para ver todos)",
+    "previous": "Anterior",
+    "next": "Próximo"
   },
   "nav": {
     "home": "Início",
@@ -208,6 +210,8 @@
       "step2": "Passo 2",
       "tabItems": "Escolher Peças",
       "tabOutfits": "Usar Look Salvo",
+      "savedOutfits": "Looks Salvos",
+      "noOutfits": "Nenhum look salvo ainda",
       "noSavedOutfits": "Nenhum look salvo ainda. Gere alguns looks primeiro!",
       "selectSavedOutfit": "Selecione um look salvo",
       "yourPhoto": "Sua Foto",
