@@ -12,6 +12,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useItemsByCategory } from "@/hooks/use-items-by-category";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ItemRow from "@/components/ItemRow";
+import EmptyState from "@/components/EmptyState";
 import ToggleButtonGroup from "@/components/ToggleButtonGroup";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
@@ -521,22 +522,17 @@ export default function GenerateOutfitPage() {
               {/* Empty state when no items in wardrobe */}
               {items.length === 0 ? (
                 <div className="p-5 rounded-2xl bg-secondary/30 border-2 border-dashed border-foreground/[0.08]">
-                  <div className="py-12 flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 mb-5 rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center">
-                      <Shirt className="w-8 h-8 text-muted-foreground/40" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">{t("outfits.noItemsInWardrobe")}</h3>
-                    <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-                      {t("outfits.addItemsFirst")}
-                    </p>
-                    <Link
-                      href="/items/new"
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 transition-opacity"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {t("outfits.goToWardrobe")}
-                    </Link>
-                  </div>
+                  <EmptyState
+                    icon={<Shirt className="w-8 h-8 text-muted-foreground/40" />}
+                    title={t("outfits.noItemsInWardrobe")}
+                    description={t("outfits.addItemsFirst")}
+                    action={{
+                      label: t("outfits.goToWardrobe"),
+                      href: "/items/new",
+                      icon: <Plus className="w-4 h-4" />,
+                    }}
+                    size="lg"
+                  />
                 </div>
               ) : (
               /* Item Categories - wrapped in container to match AI Picks style */

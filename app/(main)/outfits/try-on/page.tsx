@@ -13,6 +13,7 @@ import { useItemsByCategory } from "@/hooks/use-items-by-category";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ImageUploader from "@/components/ImageUploader";
 import ItemRow from "@/components/ItemRow";
+import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
 import { urlToBase64 } from "@/lib/images.client";
@@ -400,22 +401,17 @@ export default function TryOnPage() {
                   selectionMode !== "items" ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}>
                   {items.length === 0 ? (
-                    <div className="py-8 flex flex-col items-center justify-center text-center">
-                      <div className="w-14 h-14 mb-4 rounded-xl bg-foreground/5 border border-border/30 flex items-center justify-center">
-                        <Shirt className="w-7 h-7 text-muted-foreground/40" />
-                      </div>
-                      <h3 className="text-sm font-medium mb-1">{t("outfits.noItemsInWardrobe")}</h3>
-                      <p className="text-xs text-muted-foreground mb-4 max-w-[200px]">
-                        {t("outfits.addItemsFirst")}
-                      </p>
-                      <Link
-                        href="/items/new"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-foreground text-background font-medium text-xs hover:opacity-90 transition-opacity"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        {t("outfits.goToWardrobe")}
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={<Shirt className="w-7 h-7 text-muted-foreground/40" />}
+                      title={t("outfits.noItemsInWardrobe")}
+                      description={t("outfits.addItemsFirst")}
+                      action={{
+                        label: t("outfits.goToWardrobe"),
+                        href: "/items/new",
+                        icon: <Plus className="w-3.5 h-3.5" />,
+                      }}
+                      size="md"
+                    />
                   ) : (
                   <div className="space-y-5">
                     {/* Selection strip - shows selected items */}
@@ -536,22 +532,17 @@ export default function TryOnPage() {
                   {/* Paginated grid of saved outfits */}
                   <div className="space-y-4">
                   {savedOutfits.length === 0 ? (
-                    <div className="py-8 flex flex-col items-center justify-center text-center">
-                      <div className="w-14 h-14 mb-4 rounded-xl bg-foreground/5 border border-border/30 flex items-center justify-center">
-                        <ImageIcon className="w-7 h-7 text-muted-foreground/40" />
-                      </div>
-                      <h3 className="text-sm font-medium mb-1">{t("outfits.tryOn.noOutfits")}</h3>
-                      <p className="text-xs text-muted-foreground mb-4 max-w-[200px]">
-                        {t("outfits.tryOn.noSavedOutfits")}
-                      </p>
-                      <Link
-                        href="/outfits/generate"
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-foreground text-background font-medium text-xs hover:opacity-90 transition-opacity"
-                      >
-                        <Wand2 className="w-3.5 h-3.5" />
-                        {t("outfits.createOutfit")}
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={<ImageIcon className="w-7 h-7 text-muted-foreground/40" />}
+                      title={t("outfits.tryOn.noOutfits")}
+                      description={t("outfits.tryOn.noSavedOutfits")}
+                      action={{
+                        label: t("outfits.createOutfit"),
+                        href: "/outfits/generate",
+                        icon: <Wand2 className="w-3.5 h-3.5" />,
+                      }}
+                      size="md"
+                    />
                   ) : (
                     <>
                       {/* Header */}

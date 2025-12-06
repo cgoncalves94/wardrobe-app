@@ -9,6 +9,7 @@ import { toast } from '@/components/ui/sonner';
 import { ArrowLeft, Loader2, ChevronDown, Check, FolderPlus } from 'lucide-react';
 import { ROOT_CONFIG } from '@/lib/categories';
 import { useClickOutside } from '@/hooks/use-click-outside';
+import EmptyState from '@/components/EmptyState';
 
 /**
  * Form page for adding a new wardrobe item with image upload
@@ -125,19 +126,16 @@ export default function NewItemPage() {
               {dropdownOpen && (
                 <div className="absolute z-50 w-full mt-1 py-1 rounded-lg border border-border bg-background shadow-lg max-h-64 overflow-y-auto">
                   {categories.length === 0 ? (
-                    <div className="py-6 px-4 text-center">
-                      <div className="w-10 h-10 mx-auto mb-3 rounded-lg bg-secondary flex items-center justify-center">
-                        <FolderPlus className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <p className="text-sm font-medium text-foreground mb-1">{t('items.noCategoriesYet')}</p>
-                      <p className="text-xs text-muted-foreground mb-3">{t('items.createCategoriesFirst')}</p>
-                      <Link
-                        href="/categories"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
-                      >
-                        {t('categories.addCategory')}
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={<FolderPlus className="w-5 h-5 text-muted-foreground" />}
+                      title={t('items.noCategoriesYet')}
+                      description={t('items.createCategoriesFirst')}
+                      action={{
+                        label: t('categories.addCategory'),
+                        href: '/categories',
+                      }}
+                      size="sm"
+                    />
                   ) : (
                     ROOT_CONFIG.map(({ key, dbValue, icon: Icon }) => {
                       const rootCategories = categories.filter((c) => c.root === dbValue);
