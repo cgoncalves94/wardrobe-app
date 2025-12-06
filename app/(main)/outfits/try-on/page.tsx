@@ -41,8 +41,8 @@ import { isProRoute } from "@/lib/features";
 
 type SelectionMode = "items" | "outfits";
 
-/** Number of outfits to show per page in the grid (2x5 mobile, fits 3-col on larger screens) */
-const OUTFITS_PER_PAGE = 10;
+/** Number of outfits to show per page in the grid (divisible by 2 and 3 columns) */
+const OUTFITS_PER_PAGE = 12;
 
 /**
  * Virtual try-on page component
