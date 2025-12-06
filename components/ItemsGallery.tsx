@@ -7,11 +7,13 @@ import { useTranslations, useFormatter } from "next-intl";
 import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
+import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
 import CategoryDropdown from "@/components/CategoryDropdown";
 import type { CategoryRoot } from "@/lib/categories";
 
-/** Number of items to show per page in the grid */
-const ITEMS_PER_PAGE = 12;
+/** Responsive page sizes: 6 for 1-col mobile, 12 for 2-4 col desktop */
+const ITEMS_PER_PAGE_MOBILE = 6;
+const ITEMS_PER_PAGE_DESKTOP = 12;
 
 /** Item data for gallery display */
 export type GalleryItem = {
@@ -48,6 +50,7 @@ export default function ItemsGallery({
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const itemsPerPage = useResponsivePageSize(ITEMS_PER_PAGE_MOBILE, ITEMS_PER_PAGE_DESKTOP);
   const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
@@ -89,12 +92,19 @@ export default function ItemsGallery({
   // Paginated items for current page
   const paginatedItems = useMemo(() => {
     return filteredItems.slice(
-      currentPage * ITEMS_PER_PAGE,
-      (currentPage + 1) * ITEMS_PER_PAGE
+      currentPage * itemsPerPage,
+      (currentPage + 1) * itemsPerPage
     );
-  }, [filteredItems, currentPage]);
+  }, [filteredItems, currentPage, itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+  // Reset page if it becomes out of bounds after resize
+  useEffect(() => {
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(totalPages - 1);
+    }
+  }, [itemsPerPage, filteredItems.length, currentPage, totalPages]);
 
   async function handleDelete(item: GalleryItem) {
     if (!confirm(t('items.deleteConfirm', { name: item.name }))) return;
