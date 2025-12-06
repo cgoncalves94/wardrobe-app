@@ -1,6 +1,7 @@
 import { createClient } from "./server";
 import type { SubscriptionTier } from "@/lib/features";
 
+/** User subscription data for server-side use */
 export interface UserSubscription {
   tier: SubscriptionTier;
   isPro: boolean;

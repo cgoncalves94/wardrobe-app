@@ -1,16 +1,19 @@
-// Server-only module - do not import in client components
+/**
+ * Server-only module - do not import in client components
+ */
 import { GoogleGenAI } from "@google/genai";
 import type { OutfitStyle, MannequinGender } from "./types";
 
-// Initialize the Gemini client (server-side only)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-// Error type for SDK errors with status codes
+/** SDK error with optional HTTP status code */
 interface SdkError extends Error {
   status?: number;
 }
 
-// Retry helper with exponential backoff for 429 rate limit errors
+/**
+ * Retry helper with exponential backoff for 429 rate limit errors
+ */
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -50,21 +53,21 @@ async function withRetry<T>(
   throw lastError;
 }
 
-// Re-export types for API routes
 export type { OutfitStyle, MannequinGender } from "./types";
 
+/** Options for generating outfit from wardrobe items */
 interface GenerateOutfitOptions {
+  headwearImageBase64?: string;
   topImageBase64?: string;
   bottomImageBase64?: string;
   fullBodyImageBase64?: string;
   footwearImageBase64?: string;
   accessoryImagesBase64?: string[];
-  style?: OutfitStyle;
-  additionalPrompt?: string;
   useMannequin?: boolean;
   mannequinGender?: MannequinGender;
 }
 
+/** Options for virtual try-on generation */
 interface TryOnOptions {
   userPhotoBase64: string;
   outfitDescription: string;
@@ -78,135 +81,90 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   imageBase64: string;
   prompt: string;
 }> {
-  const { topImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, style = "casual", additionalPrompt, useMannequin = false, mannequinGender = "female" } = options;
+  const { headwearImageBase64, topImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, useMannequin = false, mannequinGender = "female" } = options;
 
-  // Build the content parts
+  // Build the content parts - images first, then prompt (per Google best practices)
   const parts: any[] = [];
+  let itemCount = 0;
 
-  // Add clothing images (using jpeg as default - Gemini handles format detection)
+  const hasFullBody = Boolean(fullBodyImageBase64);
+  const hasTop = Boolean(topImageBase64);
+  const hasBottom = Boolean(bottomImageBase64);
+
+  if (headwearImageBase64) {
+    parts.push({ inlineData: { mimeType: "image/jpeg", data: headwearImageBase64 } });
+    itemCount++;
+  }
   if (topImageBase64) {
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: topImageBase64,
-      },
-    });
+    parts.push({ inlineData: { mimeType: "image/jpeg", data: topImageBase64 } });
+    itemCount++;
   }
-
   if (bottomImageBase64) {
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: bottomImageBase64,
-      },
-    });
+    parts.push({ inlineData: { mimeType: "image/jpeg", data: bottomImageBase64 } });
+    itemCount++;
   }
-
   if (fullBodyImageBase64) {
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: fullBodyImageBase64,
-      },
-    });
+    parts.push({ inlineData: { mimeType: "image/jpeg", data: fullBodyImageBase64 } });
+    itemCount++;
   }
-
   if (footwearImageBase64) {
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: footwearImageBase64,
-      },
-    });
+    parts.push({ inlineData: { mimeType: "image/jpeg", data: footwearImageBase64 } });
+    itemCount++;
   }
-
   if (accessoryImagesBase64?.length) {
     for (const accessory of accessoryImagesBase64) {
-      parts.push({
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: accessory,
-        },
-      });
+      parts.push({ inlineData: { mimeType: "image/jpeg", data: accessory } });
+      itemCount++;
     }
   }
 
-  // Build the prompt with explicit item descriptions
-  const styleDescriptions: Record<OutfitStyle, string> = {
-    casual: "relaxed, everyday look with comfortable vibes",
-    formal: "sophisticated, polished, professional appearance",
-    "date-night": "romantic, attractive, perfect for a special evening",
-    work: "professional yet stylish office appropriate look",
-    street: "trendy urban fashion with cool streetwear aesthetics",
-    cozy: "warm, comfortable, soft and inviting",
-    elegant: "luxurious, refined, high-fashion appearance",
-  };
+  // Narrative prompt following Google's best practices:
+  // - Start with "Create an image:"
+  // - Use photographer language (lens, angle, lighting)
+  // - Use "these exact garments" for fidelity
+  // - Describe scene narratively, not as bullet points
+  const flatLayLayout = (() => {
+    if (hasFullBody) {
+      return `Arrange these exact ${itemCount} garments from the reference images in a clean, non-overlapping layout. Place the full-body garment (dress/jumpsuit/romper) centered as the main piece. If tops or outer layers are provided, place them neatly above or slightly offset. Position shoes and accessories to the SIDE of the main garment (not below it) to avoid overlap. Leave clear space between all items.`;
+    }
+    if (hasTop && hasBottom) {
+      return `Arrange these exact ${itemCount} garments from the reference images in a clean, non-overlapping layout. Place the top garment at top center, the bottom garment (pants/skirt/shorts) directly below it. Position shoes and accessories to the SIDE of the main garments (not below the bottom) to avoid overlap. Leave clear space between all items.`;
+    }
+    if (hasTop && !hasBottom) {
+      return `Arrange these exact ${itemCount} garments from the reference images in a clean, non-overlapping layout. Place the top garment centered as the main piece. Position shoes and accessories to the SIDE of the top to avoid overlap. Leave clear space between all items.`;
+    }
+    if (!hasTop && hasBottom) {
+      return `Arrange these exact ${itemCount} garments from the reference images in a clean, non-overlapping layout. Place the bottom garment centered as the main piece. Position shoes and accessories to the SIDE of the bottom to avoid overlap. Leave clear space between all items.`;
+    }
+    return `Arrange these exact ${itemCount} garments from the reference images in a clean, non-overlapping layout. Position shoes and accessories to the SIDE of any main garments. Leave clear space between all items.`;
+  })();
 
-  // Build dynamic description of what items were actually provided
-  const providedItems: string[] = [];
-  if (topImageBase64) providedItems.push("top/shirt");
-  if (bottomImageBase64) providedItems.push("bottom/pants");
-  if (fullBodyImageBase64) providedItems.push("full body piece/dress");
-  if (footwearImageBase64) providedItems.push("footwear/shoes");
-  if (accessoryImagesBase64?.length) providedItems.push(`${accessoryImagesBase64.length} accessory item(s)`);
+  const flatLayProportions = (() => {
+    if (hasFullBody) {
+      return "PROPORTIONS: Size items realistically for the same adult - full-body garment about 2.5-3x the shoe length; shoes small; accessories scaled naturally.";
+    }
+    if (hasTop && hasBottom) {
+      return "PROPORTIONS: Size all items realistically for the same adult - bottom about 3x taller than the top, shoes about 1/4 the bottom length; accessories scaled naturally.";
+    }
+    if (hasTop && !hasBottom) {
+      return "PROPORTIONS: Size items realistically for the same adult - top sized naturally; shoes about half the top length; accessories scaled naturally.";
+    }
+    if (!hasTop && hasBottom) {
+      return "PROPORTIONS: Size items realistically for the same adult - bottom full-length; shoes about 1/4 the bottom length; accessories scaled naturally.";
+    }
+    return "PROPORTIONS: Scale all items naturally to adult size; shoes remain small relative to garments.";
+  })();
 
-  const itemCount = parts.length;
-  const itemList = providedItems.join(", ");
-
-  // Build prompt based on display mode (flat-lay vs mannequin)
   const prompt = useMannequin
-    ? `Create a professional fashion product photograph showing clothing on a ${mannequinGender} mannequin. I am providing exactly ${itemCount} clothing item image(s): ${itemList}.
+    ? `Create an image: A vertical 3:4 portrait fashion photograph shot with an 85mm lens. A ${mannequinGender} headless gray mannequin stands centered against a clean white studio backdrop, wearing these exact ${itemCount} garments from the reference images above. Capture full body from shoulders to feet. Soft diffused studio lighting. Each garment must preserve its exact original appearance from the reference - maintaining identical neckline, collar style, sleeve length, colors, patterns and fabric texture. If a full-body garment is included, treat it as the primary piece; layer any provided tops or outerwear naturally. Only include the garments shown in the references, nothing additional.`
 
-PHOTOGRAPHY STYLE:
-- Full-body ${mannequinGender} mannequin (headless, standard retail display style)
-- Clean white/light gray studio background
-- Front-facing view, straight-on camera angle
-- Professional fashion retail photography aesthetic
-- Soft, even studio lighting with minimal shadows
-- The mannequin should be a neutral gray or white color
+    : `Create an image: A professional overhead flat-lay photograph shot with a 35mm lens looking straight down at a white marble surface. Soft natural window light from the left.
 
-MANNEQUIN DISPLAY:
-- Clothing naturally draped and fitted on the mannequin
-- Show how the outfit would look when worn together
-- Mannequin in neutral standing pose
-- Full body shot showing all garments from shoulders to feet
+${flatLayLayout}
 
-CRITICAL RULES:
-- Use ONLY the exact ${itemCount} clothing items I provided - nothing more
-- If no shoes were provided, mannequin has bare feet or cropped at ankles
-- If no accessories were provided, show zero accessories
-- The outfit style should feel ${styleDescriptions[style]}
-- Standard retail mannequin - NO human features, NO face, NO skin texture
-${additionalPrompt ? `\nAdditional notes: ${additionalPrompt}` : ""}
+${flatLayProportions}
 
-Remember: This is a MANNEQUIN product photo for fashion retail, showing how the outfit looks when worn together.`
-
-    : `Create a professional top-down flat-lay fashion photograph. I am providing exactly ${itemCount} clothing item image(s): ${itemList}.
-
-PHOTOGRAPHY STYLE:
-- Camera angle: Directly overhead, bird's eye view looking straight down
-- Each garment laid FLAT and SEPARATELY on a clean white marble surface
-- Items should NOT overlap or be arranged as if worn on a body/mannequin
-- Space between each item (2-3 inches gap)
-- Garments neatly folded or spread flat showing their full shape
-- Soft natural window light from the left, creating gentle shadows
-- Magazine editorial flat-lay aesthetic, like a fashion blogger's Instagram post
-
-ARRANGEMENT:
-- Top garments placed in upper portion of frame
-- Bottom garments (pants/skirts) placed below with clear separation
-- Shoes placed at the bottom if provided
-- Each piece clearly visible and distinct from others
-
-CRITICAL RULES:
-- Use ONLY the exact ${itemCount} clothing items I provided - nothing more
-- If no shoes were provided, do NOT add any footwear
-- If no accessories were provided, show zero accessories
-- Clean white/light gray background, no props or decorations
-- The outfit style should feel ${styleDescriptions[style]}
-${additionalPrompt ? `\nAdditional notes: ${additionalPrompt}` : ""}
-
-Remember: This is a FLAT-LAY photo where clothes are laid separately on a surface, NOT styled on an invisible mannequin or body form.`;
+Each garment preserves its exact appearance from the reference. Every piece laid completely flat and fully spread open. Only these ${itemCount} garments, nothing additional.`;
 
   parts.push({ text: prompt });
 
@@ -227,6 +185,82 @@ Remember: This is a FLAT-LAY photo where clothes are laid separately on a surfac
 
   if (!imagePart?.inlineData?.data) {
     throw new Error("Failed to generate outfit image");
+  }
+
+  return {
+    imageBase64: imagePart.inlineData.data,
+    prompt,
+  };
+}
+
+/** Options for AI Picks text-to-image generation */
+interface GenerateFromPromptOptions {
+  itemsDescription: string;
+  style: OutfitStyle;
+  useMannequin?: boolean;
+  mannequinGender?: MannequinGender;
+}
+
+/**
+ * Generate an outfit image from text prompt (AI Picks mode)
+ * Pure text-to-image generation without wardrobe items
+ */
+export async function generateOutfitFromPrompt(options: GenerateFromPromptOptions): Promise<{
+  imageBase64: string;
+  prompt: string;
+}> {
+  const { itemsDescription, style, useMannequin = false, mannequinGender = "female" } = options;
+
+  const styleDescriptions: Record<OutfitStyle, string> = {
+    casual: "relaxed, everyday look with comfortable vibes",
+    formal: "sophisticated, polished, professional appearance",
+    "date-night": "romantic, attractive, perfect for a special evening",
+    work: "professional yet stylish office appropriate look",
+    street: "trendy urban fashion with cool streetwear aesthetics",
+    cozy: "warm, comfortable, soft and inviting",
+    elegant: "luxurious, refined, high-fashion appearance",
+    sporty: "athletic, active lifestyle with performance-ready aesthetics",
+  };
+
+  // Build prompt based on display mode (flat-lay vs mannequin)
+  // Following Google's best practices: narrative style, photographer language
+  // IMPORTANT: Be restrictive - only generate what user explicitly asks for
+  const prompt = useMannequin
+    ? `Create an image: A ${mannequinGender} headless gray mannequin against a white studio backdrop. Full body from shoulders to feet. Soft studio lighting.
+
+Wearing ONLY: ${itemsDescription}. Style: ${styleDescriptions[style]}.
+
+NO extras - no watches, glasses, belts, jewelry, bags, or props unless explicitly requested.`
+
+    : `Create an image: Professional overhead flat-lay photograph on white marble surface. Soft natural lighting.
+
+${mannequinGender === "male" ? "Men's" : "Women's"} clothing. ONLY these items: ${itemsDescription}. Style: ${styleDescriptions[style]}.
+
+IMPORTANT: Every garment must be COMPLETELY UNFOLDED and SPREAD FLAT - NOT FOLDED. Show full garment shape with arms/legs extended outward.
+
+Items arranged top-to-bottom as worn on body. No overlapping.
+
+NO extras unless explicitly requested.`;
+
+  const parts: any[] = [{ text: prompt }];
+
+  // Call Gemini API with retry logic for rate limits
+  const response = await withRetry(() =>
+    ai.models.generateContent({
+      model: "gemini-2.5-flash-image",
+      contents: [{ role: "user", parts }],
+      config: {
+        responseModalities: ["TEXT", "IMAGE"],
+      },
+    })
+  );
+
+  // Extract image from response
+  const responseParts = response.candidates?.[0]?.content?.parts || [];
+  const imagePart = responseParts.find((p: any) => p.inlineData);
+
+  if (!imagePart?.inlineData?.data) {
+    throw new Error("Failed to generate outfit image from prompt");
   }
 
   return {
@@ -266,20 +300,23 @@ export async function generateTryOnImage(options: TryOnOptions): Promise<{
     }
   }
 
-  const prompt = `Create a realistic fashion photograph showing the person in the first image wearing the outfit shown in the subsequent images.
+  const clothingCount = clothingImagesBase64?.length || 0;
+  const clothingRef = clothingCount === 1 ? "item" : `${clothingCount} items`;
 
-Outfit description: ${outfitDescription}
+  const prompt = `FIRST image = person photo (the BASE).
+Remaining ${clothingRef} = clothing to apply: ${outfitDescription}
 
-Requirements:
-- Keep the person's face, body shape, and features exactly as they appear in the reference photo
-- Realistically fit the clothing to the person's body
-- Maintain natural lighting and shadows
-- The result should look like a real photograph, not a composite
-- Professional fashion photography quality
-- Full body or 3/4 shot showing the complete outfit
-- The clothing should drape and fit naturally on the person
+TASK: Replace ONLY the matching clothing on the person. Keep their existing clothes for body parts not covered by the reference items.
 
-Generate a single photorealistic image of the person wearing the described outfit.`;
+Example: If reference shows only shoes, change only the shoes - keep the person's existing shirt/pants.
+
+CRITICAL:
+- Output same dimensions/aspect ratio as person photo
+- Same person, pose, background, lighting
+- If feet visible in person photo, feet MUST be visible in output
+- DO NOT zoom, crop, or reframe
+
+Output = person photo with the reference clothing applied.`;
 
   parts.push({ text: prompt });
 

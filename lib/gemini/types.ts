@@ -1,5 +1,8 @@
-// Client-safe types and constants for outfit generation
+/**
+ * Client-safe types and constants for outfit generation
+ */
 
+/** Available outfit style options for AI generation */
 export type OutfitStyle =
   | "casual"
   | "formal"
@@ -7,21 +10,26 @@ export type OutfitStyle =
   | "work"
   | "street"
   | "cozy"
-  | "elegant";
+  | "elegant"
+  | "sporty";
 
-export const OUTFIT_STYLES: { value: OutfitStyle; label: string; emoji: string }[] = [
-  { value: "casual", label: "Casual", emoji: "👕" },
-  { value: "formal", label: "Formal", emoji: "👔" },
-  { value: "date-night", label: "Date Night", emoji: "💕" },
-  { value: "work", label: "Work", emoji: "💼" },
-  { value: "street", label: "Street Style", emoji: "🔥" },
-  { value: "cozy", label: "Cozy", emoji: "🧸" },
-  { value: "elegant", label: "Elegant", emoji: "✨" },
+/** Outfit style options with display labels */
+export const OUTFIT_STYLES: { value: OutfitStyle; label: string }[] = [
+  { value: "casual", label: "Casual" },
+  { value: "formal", label: "Formal" },
+  { value: "date-night", label: "Date Night" },
+  { value: "work", label: "Work" },
+  { value: "street", label: "Street Style" },
+  { value: "cozy", label: "Cozy" },
+  { value: "elegant", label: "Elegant" },
+  { value: "sporty", label: "Sporty" },
 ];
 
+/** Gender options for mannequin display mode */
 export type MannequinGender = "female" | "male";
 
-export const MANNEQUIN_GENDERS: { value: MannequinGender; label: string; emoji: string }[] = [
-  { value: "female", label: "Female", emoji: "👩" },
-  { value: "male", label: "Male", emoji: "👨" },
+/** Mannequin gender options with display labels */
+export const MANNEQUIN_GENDERS: { value: MannequinGender; label: string }[] = [
+  { value: "female", label: "Female" },
+  { value: "male", label: "Male" },
 ];

@@ -8,17 +8,20 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+/** Category root types matching database values */
 export type CategoryRoot = "Headwear" | "Top" | "Bottom" | "Full Body" | "Footwear" | "Accessories";
 
+/** Configuration for a category root with translation key and icon */
 export interface RootConfig {
   key: string;
   dbValue: CategoryRoot;
   icon: LucideIcon;
 }
 
-// Single source of truth for category root configuration
-// key = translation key (used with t(`categories.roots.${key}`))
-// dbValue = value stored in database
+/**
+ * Single source of truth for category root configuration
+ * key = translation key, dbValue = database value
+ */
 export const ROOT_CONFIG: RootConfig[] = [
   { key: "headwear", dbValue: "Headwear", icon: HardHat },
   { key: "top", dbValue: "Top", icon: Shirt },
@@ -28,7 +31,9 @@ export const ROOT_CONFIG: RootConfig[] = [
   { key: "accessories", dbValue: "Accessories", icon: Watch },
 ];
 
-// Helper to get icon by root value
+/**
+ * Get the icon component for a category root
+ */
 export function getRootIcon(root: string): LucideIcon {
   const config = ROOT_CONFIG.find((r) => r.dbValue === root);
   if (!config && process.env.NODE_ENV === "development") {
@@ -37,7 +42,9 @@ export function getRootIcon(root: string): LucideIcon {
   return config?.icon || Shirt;
 }
 
-// Helper to get translation key by root value
+/**
+ * Get the translation key for a category root
+ */
 export function getRootTranslationKey(root: string): string {
   const config = ROOT_CONFIG.find((r) => r.dbValue === root);
   if (!config && process.env.NODE_ENV === "development") {

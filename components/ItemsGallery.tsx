@@ -4,10 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Star, Trash2, X } from "lucide-react";
+import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
+import CategoryDropdown from "@/components/CategoryDropdown";
+import type { CategoryRoot } from "@/lib/categories";
 
+/** Number of items to show per page in the grid */
+const ITEMS_PER_PAGE = 12;
+
+/** Item data for gallery display */
 export type GalleryItem = {
   id: string;
   name: string;
@@ -18,9 +24,11 @@ export type GalleryItem = {
   created_at?: string | null;
 };
 
+/** Category data for filtering */
 export type GalleryCategory = {
   id: string;
   name: string;
+  root: CategoryRoot;
 };
 
 type Props = {
@@ -29,6 +37,9 @@ type Props = {
   onSelectCategory?: (id: string | null) => void;
 };
 
+/**
+ * Filterable gallery grid for wardrobe items with lightbox and favorites
+ */
 export default function ItemsGallery({
   items: initialItems,
   categories,
@@ -37,6 +48,7 @@ export default function ItemsGallery({
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -45,7 +57,6 @@ export default function ItemsGallery({
   const t = useTranslations();
   const format = useFormatter();
 
-  // Close with Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -60,6 +71,8 @@ export default function ItemsGallery({
   const setCategory = (id: string | null) => {
     if (onSelectCategory) onSelectCategory(id);
     setSelectedCategoryId(id);
+    setShowFavoritesOnly(false);
+    setCurrentPage(0);
   };
 
   const filteredItems = useMemo(() => {
@@ -72,6 +85,16 @@ export default function ItemsGallery({
     }
     return filtered;
   }, [items, selectedCategoryId, showFavoritesOnly]);
+
+  // Paginated items for current page
+  const paginatedItems = useMemo(() => {
+    return filteredItems.slice(
+      currentPage * ITEMS_PER_PAGE,
+      (currentPage + 1) * ITEMS_PER_PAGE
+    );
+  }, [filteredItems, currentPage]);
+
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
 
   async function handleDelete(item: GalleryItem) {
     if (!confirm(t('items.deleteConfirm', { name: item.name }))) return;
@@ -145,21 +168,33 @@ export default function ItemsGallery({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       {/* Header */}
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold">{t('items.title')}</h2>
-        <Link
-          href="/items/new"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
-        >
-          <Plus className="w-4 h-4" />
-          {t('items.addItem')}
-        </Link>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{t('items.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('items.description')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/outfits/generate"
+            className="hidden lg:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:bg-secondary transition-colors font-medium"
+          >
+            <Wand2 className="w-4 h-4" />
+            {t('outfits.createOutfit')}
+          </Link>
+          <Link
+            href="/items/new"
+            className="hidden sm:inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
+          >
+            <Plus className="w-4 h-4" />
+            {t('items.addItem')}
+          </Link>
+        </div>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex flex-wrap gap-2">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => {
@@ -174,45 +209,43 @@ export default function ItemsGallery({
         >
           {t('common.all')}
         </button>
+
+        {/* Favorites toggle */}
         <button
           type="button"
           onClick={() => {
-            setShowFavoritesOnly(!showFavoritesOnly);
-            if (!showFavoritesOnly) setCategory(null);
+            setShowFavoritesOnly((prev) => !prev);
+            setCurrentPage(0);
           }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-1.5 ${
+          className={`p-2 rounded-lg transition-all ${
             showFavoritesOnly
               ? "bg-foreground text-background"
-              : "bg-secondary text-foreground hover:bg-secondary/80"
+              : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
           }`}
+          aria-label={showFavoritesOnly ? t('aria.showAll') : t('aria.showFavorites')}
+          title={showFavoritesOnly ? t('common.showingFavorites') : t('common.showFavorites')}
         >
-          <Star className={`w-3.5 h-3.5 ${showFavoritesOnly ? "fill-current" : ""}`} />
-          {t('common.favorites')}
+          <Star className={`w-4 h-4 ${showFavoritesOnly ? "fill-current" : ""}`} />
         </button>
-        <div className="w-px h-8 bg-border mx-1" />
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => {
-              setCategory(c.id);
-              setShowFavoritesOnly(false);
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              selectedCategoryId === c.id && !showFavoritesOnly
-                ? "bg-foreground text-background"
-                : "bg-secondary text-foreground hover:bg-secondary/80"
-            }`}
-          >
-            {c.name}
-          </button>
-        ))}
+
+        {/* Category dropdown */}
+        {categories.length > 0 && (
+          <>
+            <div className="w-px h-6 bg-border mx-1" />
+            <CategoryDropdown
+              categories={categories}
+              selectedId={showFavoritesOnly ? null : selectedCategoryId}
+              onSelect={setCategory}
+            />
+          </>
+        )}
       </div>
 
       {/* Grid */}
       {filteredItems.length > 0 ? (
+        <>
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {filteredItems.map((it, index) => (
+          {paginatedItems.map((it, index) => (
             <li
               key={it.id}
               className="group rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/20 transition-all"
@@ -264,6 +297,34 @@ export default function ItemsGallery({
             </li>
           ))}
         </ul>
+
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+              disabled={currentPage === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              {t("common.previous")}
+            </button>
+            <span className="text-sm text-muted-foreground">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={currentPage >= totalPages - 1}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            >
+              {t("common.next")}
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+        </>
       ) : (
         <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
           <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">

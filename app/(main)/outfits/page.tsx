@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getTranslations } from "next-intl/server";
-import { Sparkles, Wand2, Shirt, ArrowRight } from "lucide-react";
+import { Sparkles, Shirt, ArrowRight } from "lucide-react";
 import OutfitsGallery from "@/components/OutfitsGallery";
 import { getUserSubscription } from "@/lib/supabase/subscription";
 import { isProRoute } from "@/lib/features";
@@ -9,16 +9,17 @@ import ProBadge from "@/components/ProBadge";
 
 export const revalidate = 0;
 
-async function getOutfits(userId: string) {
+async function getOutfitsByType(userId: string, type: "outfit" | "tryon") {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("outfits")
     .select("*")
     .eq("user_id", userId)
+    .eq("type", type)
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("Error fetching outfits:", error);
+    console.error(`Error fetching ${type}s:`, error);
     return [];
   }
   return data || [];
@@ -34,25 +35,20 @@ export default async function OutfitsPage() {
     return <div className="text-center py-12 text-muted-foreground">{t('auth.loginRequired', { resource: t('nav.outfits').toLowerCase() })}</div>;
   }
 
-  const outfits = await getOutfits(user.id);
+  // Fetch outfits and try-ons in parallel
+  const [outfits, tryons] = await Promise.all([
+    getOutfitsByType(user.id, "outfit"),
+    getOutfitsByType(user.id, "tryon"),
+  ]);
 
   return (
     <div className="space-y-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('outfits.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('outfits.description')}
-          </p>
-        </div>
-        <Link
-          href="/outfits/generate"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium hover:opacity-90 transition-opacity"
-        >
-          <Wand2 className="w-4 h-4" />
-          {t('outfits.createOutfit')}
-        </Link>
+      <div>
+        <h1 className="text-2xl font-semibold">{t('outfits.title')}</h1>
+        <p className="text-muted-foreground mt-1">
+          {t('outfits.description')}
+        </p>
       </div>
 
       {/* Quick Actions */}
@@ -94,10 +90,9 @@ export default async function OutfitsPage() {
         </Link>
       </div>
 
-      {/* Saved Outfits */}
+      {/* Saved Outfits & Try-Ons */}
       <div>
-        <h2 className="text-lg font-semibold mb-5">{t('outfits.savedOutfits')}</h2>
-        <OutfitsGallery outfits={outfits} />
+        <OutfitsGallery outfits={outfits} tryons={tryons} />
       </div>
     </div>
   );

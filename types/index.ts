@@ -1,10 +1,12 @@
 // Database types for Wardrobe app
 
+import type { CategoryRoot } from "@/lib/categories";
+
 export interface Category {
   id: string;
   user_id: string | null;
   name: string;
-  root: 'Headwear' | 'Top' | 'Bottom' | 'Full Body' | 'Footwear' | 'Accessories';
+  root: CategoryRoot;
   created_at?: string;
 }
 
