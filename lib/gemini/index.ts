@@ -3,6 +3,7 @@
  */
 import { GoogleGenAI } from "@google/genai";
 import type { OutfitStyle, MannequinGender } from "./types";
+import { getRootPromptDescription } from "@/lib/categories";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
@@ -67,11 +68,22 @@ interface GenerateOutfitOptions {
   mannequinGender?: MannequinGender;
 }
 
+type TryOnMode = "items" | "outfits";
+
+/** Clothing item with its category for smarter prompts */
+interface ClothingItem {
+  base64: string;
+  category: string; // e.g., "Headwear", "Top", "Bottom", "Full Body", "Footwear", "Accessories"
+}
+
 /** Options for virtual try-on generation */
 interface TryOnOptions {
+  mode: TryOnMode;
   userPhotoBase64: string;
-  outfitDescription: string;
-  clothingImagesBase64?: string[];
+  /** For items mode: individual clothing with categories */
+  clothingItems?: ClothingItem[];
+  /** For outfits mode: single outfit image (replaces everything) */
+  outfitImageBase64?: string;
 }
 
 /**
@@ -276,54 +288,101 @@ export async function generateTryOnImage(options: TryOnOptions): Promise<{
   imageBase64: string;
   prompt: string;
 }> {
-  const { userPhotoBase64, outfitDescription, clothingImagesBase64 } = options;
+  const { mode, userPhotoBase64, clothingItems, outfitImageBase64 } = options;
 
   const parts: any[] = [];
+  let prompt: string;
 
-  // Add user photo first
-  parts.push({
-    inlineData: {
-      mimeType: "image/jpeg",
-      data: userPhotoBase64,
-    },
-  });
+  if (mode === "outfits" && outfitImageBase64) {
+    // OUTFIT MODE: Replace the entire outfit
+    prompt = `Replace ALL clothing on the person with the complete outfit shown in the first image. The first image shows a full outfit - use it to dress the person completely. Keep the person's face, hair, pose, and background exactly the same. Replace everything they're wearing with this outfit.
 
-  // Add clothing images if provided
-  if (clothingImagesBase64?.length) {
-    for (const clothing of clothingImagesBase64) {
+Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
+
+IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output the image at the same resolution and aspect ratio as the person's photo. Do not crop, resize, or change the framing.`;
+
+    parts.push({ text: prompt });
+
+    // Add outfit image
+    parts.push({ text: "COMPLETE OUTFIT TO WEAR:" });
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: outfitImageBase64,
+      },
+    });
+
+    // Add person photo
+    parts.push({ text: "PERSON TO DRESS:" });
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: userPhotoBase64,
+      },
+    });
+  } else if (clothingItems?.length) {
+    // ITEMS MODE: Replace only specific clothing categories
+    const categories = clothingItems.map(item => item.category);
+    const hasFullBody = categories.includes("Full Body");
+
+    // Build smart replacement instructions based on categories
+    let replacementInstructions: string;
+    if (hasFullBody) {
+      // Full body replaces top + bottom
+      const fullBodyDesc = getRootPromptDescription("Full Body");
+      const otherCategories = categories.filter(c => c !== "Full Body");
+      if (otherCategories.length > 0) {
+        const otherDescriptions = otherCategories.map(c => getRootPromptDescription(c));
+        replacementInstructions = `Replace the person's top and bottom clothing with the ${fullBodyDesc}, and also replace their ${otherDescriptions.join(" and ")}.`;
+      } else {
+        replacementInstructions = `Replace the person's top and bottom clothing with the ${fullBodyDesc}.`;
+      }
+    } else {
+      const categoryDescriptions = categories.map(c => getRootPromptDescription(c));
+      replacementInstructions = `Replace ONLY the person's ${categoryDescriptions.join(" and ")} with the items shown. Keep all OTHER clothing exactly as it appears in the original photo.`;
+    }
+
+    prompt = `${replacementInstructions} Keep the person's face, hair, pose, and background exactly the same.
+
+Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
+
+IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output the image at the same resolution and aspect ratio as the person's photo. Do not crop, resize, or change the framing.`;
+
+    parts.push({ text: prompt });
+
+    // Add clothing images with category labels
+    for (const item of clothingItems) {
+      parts.push({ text: `${item.category.toUpperCase()} ITEM:` });
       parts.push({
         inlineData: {
           mimeType: "image/jpeg",
-          data: clothing,
+          data: item.base64,
         },
       });
     }
+
+    // Add person photo
+    parts.push({ text: "PERSON TO EDIT:" });
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: userPhotoBase64,
+      },
+    });
+  } else {
+    throw new Error("No clothing items or outfit provided");
   }
 
-  const clothingCount = clothingImagesBase64?.length || 0;
-  const clothingRef = clothingCount === 1 ? "item" : `${clothingCount} items`;
-
-  const prompt = `FIRST image = person photo (the BASE).
-Remaining ${clothingRef} = clothing to apply: ${outfitDescription}
-
-TASK: Replace ONLY the matching clothing on the person. Keep their existing clothes for body parts not covered by the reference items.
-
-Example: If reference shows only shoes, change only the shoes - keep the person's existing shirt/pants.
-
-CRITICAL:
-- Output same dimensions/aspect ratio as person photo
-- Same person, pose, background, lighting
-- If feet visible in person photo, feet MUST be visible in output
-- DO NOT zoom, crop, or reframe
-
-Output = person photo with the reference clothing applied.`;
-
-  parts.push({ text: prompt });
+  // Debug: log total payload size
+  const totalBase64Size = parts
+    .filter((p: any) => p.inlineData?.data)
+    .reduce((sum: number, p: any) => sum + (p.inlineData?.data?.length || 0), 0);
+  console.log(`[Gemini][TryOn] Total base64 size: ${(totalBase64Size / 1024 / 1024).toFixed(2)}MB, parts: ${parts.length}`);
 
   // Call Gemini API with retry logic for rate limits
   const response = await withRetry(() =>
     ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3-pro-image-preview",
       contents: [{ role: "user", parts }],
       config: {
         responseModalities: ["TEXT", "IMAGE"],
@@ -335,7 +394,23 @@ Output = person photo with the reference clothing applied.`;
   const imagePart = responseParts.find((p: any) => p.inlineData);
 
   if (!imagePart?.inlineData?.data) {
-    throw new Error("Failed to generate try-on image");
+    // Build a detailed error message
+    const finishReason = response.candidates?.[0]?.finishReason;
+    const blockReason = (response as any).promptFeedback?.blockReason;
+    const candidateCount = response.candidates?.length ?? 0;
+
+    let errorDetail = "Failed to generate try-on image";
+    if (blockReason) {
+      errorDetail += ` - blocked: ${blockReason}`;
+    } else if (finishReason && finishReason !== "STOP") {
+      errorDetail += ` - finish reason: ${finishReason}`;
+    } else if (candidateCount === 0) {
+      errorDetail += " - no candidates returned";
+    } else {
+      errorDetail += " - response contained no image";
+    }
+
+    throw new Error(errorDetail);
   }
 
   return {
