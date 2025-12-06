@@ -95,7 +95,9 @@
     "noFavoriteItems": "Nenhuma peça favorita ainda. Marque algumas para vê-las aqui!",
     "failedToUpdateFavorite": "Falha ao atualizar favorito",
     "deleteConfirm": "Excluir \"{name}\"?",
-    "filterByCategory": "Filtrar por categoria"
+    "filterByCategory": "Filtrar por categoria",
+    "noCategoriesYet": "Nenhuma categoria ainda",
+    "createCategoriesFirst": "Crie categorias primeiro para organizar suas peças"
   },
   "outfits": {
     "title": "Looks",
@@ -148,6 +150,9 @@
     "selected": "{count} selecionado(s)",
     "itemsAvailable": "{count} peças disponíveis",
     "noItemsInCategory": "Nenhuma peça nesta categoria",
+    "noItemsInWardrobe": "Seu guarda-roupa está vazio",
+    "addItemsFirst": "Adicione algumas peças ao seu guarda-roupa primeiro, depois volte para criar looks.",
+    "goToWardrobe": "Adicionar Peças ao Guarda-Roupa",
     "clearAllAccessories": "Limpar todos os acessórios",
     "generateOutfit": "Gerar Look",
     "generating": "Gerando...",

@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  Plus,
 } from "lucide-react";
 import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
@@ -398,6 +399,24 @@ export default function TryOnPage() {
                 <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${
                   selectionMode !== "items" ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}>
+                  {items.length === 0 ? (
+                    <div className="py-8 flex flex-col items-center justify-center text-center">
+                      <div className="w-14 h-14 mb-4 rounded-xl bg-foreground/5 border border-border/30 flex items-center justify-center">
+                        <Shirt className="w-7 h-7 text-muted-foreground/40" />
+                      </div>
+                      <h3 className="text-sm font-medium mb-1">{t("outfits.noItemsInWardrobe")}</h3>
+                      <p className="text-xs text-muted-foreground mb-4 max-w-[200px]">
+                        {t("outfits.addItemsFirst")}
+                      </p>
+                      <Link
+                        href="/items/new"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-foreground text-background font-medium text-xs hover:opacity-90 transition-opacity"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        {t("outfits.goToWardrobe")}
+                      </Link>
+                    </div>
+                  ) : (
                   <div className="space-y-5">
                     {/* Selection strip - shows selected items */}
                     {selectedCount > 0 && (
@@ -507,6 +526,7 @@ export default function TryOnPage() {
                       />
                     )}
                   </div>
+                  )}
                 </div>
 
                 {/* Saved Outfits Selection - always rendered, visibility controlled */}
@@ -516,17 +536,19 @@ export default function TryOnPage() {
                   {/* Paginated grid of saved outfits */}
                   <div className="space-y-4">
                   {savedOutfits.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 mx-auto rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center mb-4">
-                        <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
+                    <div className="py-8 flex flex-col items-center justify-center text-center">
+                      <div className="w-14 h-14 mb-4 rounded-xl bg-foreground/5 border border-border/30 flex items-center justify-center">
+                        <ImageIcon className="w-7 h-7 text-muted-foreground/40" />
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {t("outfits.tryOn.noOutfits")}
+                      <h3 className="text-sm font-medium mb-1">{t("outfits.tryOn.noOutfits")}</h3>
+                      <p className="text-xs text-muted-foreground mb-4 max-w-[200px]">
+                        {t("outfits.tryOn.noSavedOutfits")}
                       </p>
                       <Link
                         href="/outfits/generate"
-                        className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-foreground text-background font-medium text-xs hover:opacity-90 transition-opacity"
                       >
+                        <Wand2 className="w-3.5 h-3.5" />
                         {t("outfits.createOutfit")}
                       </Link>
                     </div>

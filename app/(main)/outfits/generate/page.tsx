@@ -518,7 +518,28 @@ export default function GenerateOutfitPage() {
           {/* From Items Tab - always rendered, opacity controlled for instant switch */}
           <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${activeTab !== "fromItems" ? "opacity-0 pointer-events-none max-h-0 overflow-hidden lg:max-h-none lg:overflow-visible" : "opacity-100"}`}>
             <div className={activeTab === "fromItems" && (generating || generatedImage) ? "hidden lg:block" : ""}>
-              {/* Item Categories - wrapped in container to match AI Picks style */}
+              {/* Empty state when no items in wardrobe */}
+              {items.length === 0 ? (
+                <div className="p-5 rounded-2xl bg-secondary/30 border-2 border-dashed border-foreground/[0.08]">
+                  <div className="py-12 flex flex-col items-center justify-center text-center">
+                    <div className="w-16 h-16 mb-5 rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center">
+                      <Shirt className="w-8 h-8 text-muted-foreground/40" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">{t("outfits.noItemsInWardrobe")}</h3>
+                    <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+                      {t("outfits.addItemsFirst")}
+                    </p>
+                    <Link
+                      href="/items/new"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 transition-opacity"
+                    >
+                      <Plus className="w-4 h-4" />
+                      {t("outfits.goToWardrobe")}
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+              /* Item Categories - wrapped in container to match AI Picks style */
               <div className="p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
                 <div className="space-y-5">
                   {headwearItems.length > 0 && (
@@ -599,8 +620,9 @@ export default function GenerateOutfitPage() {
                   )}
                 </div>
               </div>
-              {/* Mobile Action Bar (inline for From Items) */}
-              {renderMobileActionBar()}
+              )}
+              {/* Mobile Action Bar (inline for From Items) - only show when items exist */}
+              {items.length > 0 && renderMobileActionBar()}
             </div>
           </div>
         </div>

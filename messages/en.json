@@ -95,7 +95,9 @@
     "noFavoriteItems": "No favorite items yet. Star some items to see them here!",
     "failedToUpdateFavorite": "Failed to update favorite",
     "deleteConfirm": "Delete \"{name}\"?",
-    "filterByCategory": "Filter by category"
+    "filterByCategory": "Filter by category",
+    "noCategoriesYet": "No categories yet",
+    "createCategoriesFirst": "Create categories first to organize your items"
   },
   "outfits": {
     "title": "Outfits",
@@ -148,6 +150,9 @@
     "selected": "{count} selected",
     "itemsAvailable": "{count} items available",
     "noItemsInCategory": "No items in this category",
+    "noItemsInWardrobe": "Your wardrobe is empty",
+    "addItemsFirst": "Add some items to your wardrobe first, then come back to create outfits.",
+    "goToWardrobe": "Add Items to Wardrobe",
     "clearAllAccessories": "Clear all accessories",
     "generateOutfit": "Generate Outfit",
     "generating": "Generating...",
