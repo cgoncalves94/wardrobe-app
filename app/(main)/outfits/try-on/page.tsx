@@ -13,6 +13,7 @@ import { useItemsByCategory } from "@/hooks/use-items-by-category";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ImageUploader from "@/components/ImageUploader";
 import ItemRow from "@/components/ItemRow";
+import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
 import { urlToBase64 } from "@/lib/images.client";
@@ -32,6 +33,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  Plus,
 } from "lucide-react";
 import { getRootIcon } from "@/lib/categories";
 import Link from "next/link";
@@ -398,6 +400,19 @@ export default function TryOnPage() {
                 <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${
                   selectionMode !== "items" ? "opacity-0 pointer-events-none" : "opacity-100"
                 }`}>
+                  {items.length === 0 ? (
+                    <EmptyState
+                      icon={<Shirt className="w-7 h-7 text-muted-foreground/40" />}
+                      title={t("outfits.noItemsInWardrobe")}
+                      description={t("outfits.addItemsFirst")}
+                      action={{
+                        label: t("outfits.goToWardrobe"),
+                        href: "/items/new",
+                        icon: <Plus className="w-3.5 h-3.5" />,
+                      }}
+                      size="md"
+                    />
+                  ) : (
                   <div className="space-y-5">
                     {/* Selection strip - shows selected items */}
                     {selectedCount > 0 && (
@@ -507,6 +522,7 @@ export default function TryOnPage() {
                       />
                     )}
                   </div>
+                  )}
                 </div>
 
                 {/* Saved Outfits Selection - always rendered, visibility controlled */}
@@ -516,20 +532,17 @@ export default function TryOnPage() {
                   {/* Paginated grid of saved outfits */}
                   <div className="space-y-4">
                   {savedOutfits.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 mx-auto rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center mb-4">
-                        <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {t("outfits.tryOn.noOutfits")}
-                      </p>
-                      <Link
-                        href="/outfits/generate"
-                        className="inline-flex items-center gap-1 text-sm font-medium hover:underline"
-                      >
-                        {t("outfits.createOutfit")}
-                      </Link>
-                    </div>
+                    <EmptyState
+                      icon={<ImageIcon className="w-7 h-7 text-muted-foreground/40" />}
+                      title={t("outfits.tryOn.noOutfits")}
+                      description={t("outfits.tryOn.noSavedOutfits")}
+                      action={{
+                        label: t("outfits.createOutfit"),
+                        href: "/outfits/generate",
+                        icon: <Wand2 className="w-3.5 h-3.5" />,
+                      }}
+                      size="md"
+                    />
                   ) : (
                     <>
                       {/* Header */}

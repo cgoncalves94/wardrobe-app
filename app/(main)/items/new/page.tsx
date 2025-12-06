@@ -6,9 +6,10 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import ImageUploader from '@/components/ImageUploader';
 import { toast } from '@/components/ui/sonner';
-import { ArrowLeft, Loader2, ChevronDown, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, ChevronDown, Check, FolderPlus } from 'lucide-react';
 import { ROOT_CONFIG } from '@/lib/categories';
 import { useClickOutside } from '@/hooks/use-click-outside';
+import EmptyState from '@/components/EmptyState';
 
 /**
  * Form page for adding a new wardrobe item with image upload
@@ -124,36 +125,49 @@ export default function NewItemPage() {
 
               {dropdownOpen && (
                 <div className="absolute z-50 w-full mt-1 py-1 rounded-lg border border-border bg-background shadow-lg max-h-64 overflow-y-auto">
-                  {ROOT_CONFIG.map(({ key, dbValue, icon: Icon }) => {
-                    const rootCategories = categories.filter((c) => c.root === dbValue);
-                    if (rootCategories.length === 0) return null;
-                    return (
-                      <div key={dbValue}>
-                        <div className="px-3 py-2 flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          <Icon className="w-3.5 h-3.5" />
-                          {t(`categories.roots.${key}`)}
+                  {categories.length === 0 ? (
+                    <EmptyState
+                      icon={<FolderPlus className="w-5 h-5 text-muted-foreground" />}
+                      title={t('items.noCategoriesYet')}
+                      description={t('items.createCategoriesFirst')}
+                      action={{
+                        label: t('categories.addCategory'),
+                        href: '/categories',
+                      }}
+                      size="sm"
+                    />
+                  ) : (
+                    ROOT_CONFIG.map(({ key, dbValue, icon: Icon }) => {
+                      const rootCategories = categories.filter((c) => c.root === dbValue);
+                      if (rootCategories.length === 0) return null;
+                      return (
+                        <div key={dbValue}>
+                          <div className="px-3 py-2 flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            <Icon className="w-3.5 h-3.5" />
+                            {t(`categories.roots.${key}`)}
+                          </div>
+                          {rootCategories
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setCategoryId(c.id);
+                                  setDropdownOpen(false);
+                                }}
+                                className={`w-full px-3 py-2 pl-9 flex items-center justify-between text-sm hover:bg-secondary transition-colors ${
+                                  categoryId === c.id ? 'bg-secondary' : ''
+                                }`}
+                              >
+                                <span>{c.name}</span>
+                                {categoryId === c.id && <Check className="w-4 h-4 text-foreground" />}
+                              </button>
+                            ))}
                         </div>
-                        {rootCategories
-                          .sort((a, b) => a.name.localeCompare(b.name))
-                          .map((c) => (
-                            <button
-                              key={c.id}
-                              type="button"
-                              onClick={() => {
-                                setCategoryId(c.id);
-                                setDropdownOpen(false);
-                              }}
-                              className={`w-full px-3 py-2 pl-9 flex items-center justify-between text-sm hover:bg-secondary transition-colors ${
-                                categoryId === c.id ? 'bg-secondary' : ''
-                              }`}
-                            >
-                              <span>{c.name}</span>
-                              {categoryId === c.id && <Check className="w-4 h-4 text-foreground" />}
-                            </button>
-                          ))}
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               )}
             </div>
