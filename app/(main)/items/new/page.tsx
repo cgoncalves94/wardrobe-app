@@ -5,27 +5,22 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import ImageUploader from '@/components/ImageUploader';
-import { toast } from '@/components/ui/sonner';
-import { ArrowLeft, Loader2, ChevronDown, Check, FolderPlus } from 'lucide-react';
-import { ROOT_CONFIG } from '@/lib/categories';
-import { useClickOutside } from '@/hooks/use-click-outside';
+import CategoryDropdown from '@/components/CategoryDropdown';
 import EmptyState from '@/components/EmptyState';
+import { toast } from '@/components/ui/sonner';
+import { ArrowLeft, Loader2, FolderPlus } from 'lucide-react';
+import type { CategoryRoot } from '@/lib/categories';
 
 /**
  * Form page for adding a new wardrobe item with image upload
  */
 export default function NewItemPage() {
   const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState<string>('');
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
-  const [categories, setCategories] = useState<{ id: string; name: string; root: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; root: CategoryRoot }[]>([]);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useClickOutside<HTMLDivElement>(
-    () => setDropdownOpen(false),
-    dropdownOpen
-  );
   const supabase = createClient();
   const router = useRouter();
   const t = useTranslations();
@@ -40,12 +35,9 @@ export default function NewItemPage() {
         .select('id,name,root')
         .eq('user_id', user?.id)
         .order('name');
-      setCategories(data || []);
+      setCategories((data || []) as { id: string; name: string; root: CategoryRoot }[]);
     })();
   }, [supabase]);
-
-  const selectedCategory = categories.find(c => c.id === categoryId);
-  const selectedRoot = selectedCategory ? ROOT_CONFIG.find(r => r.dbValue === selectedCategory.root) : null;
 
   async function save() {
     if (!userId) {
@@ -103,74 +95,29 @@ export default function NewItemPage() {
             />
           </div>
 
-          {/* Category - Custom Dropdown with Icons */}
+          {/* Category */}
           <div className="space-y-2">
             <label className="text-sm font-medium">{t('items.category')}</label>
-            <div className="relative" ref={dropdownRef}>
-              <button
-                type="button"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="w-full h-11 px-4 pr-10 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring flex items-center gap-3 text-left"
-              >
-                {selectedCategory ? (
-                  <>
-                    {selectedRoot && <selectedRoot.icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
-                    <span className="truncate">{selectedCategory.name}</span>
-                  </>
-                ) : (
-                  <span className="text-muted-foreground">{t('items.categoryPlaceholder')}</span>
-                )}
-                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute z-50 w-full mt-1 py-1 rounded-lg border border-border bg-background shadow-lg max-h-64 overflow-y-auto">
-                  {categories.length === 0 ? (
-                    <EmptyState
-                      icon={<FolderPlus className="w-5 h-5 text-muted-foreground" />}
-                      title={t('items.noCategoriesYet')}
-                      description={t('items.createCategoriesFirst')}
-                      action={{
-                        label: t('categories.addCategory'),
-                        href: '/categories',
-                      }}
-                      size="sm"
-                    />
-                  ) : (
-                    ROOT_CONFIG.map(({ key, dbValue, icon: Icon }) => {
-                      const rootCategories = categories.filter((c) => c.root === dbValue);
-                      if (rootCategories.length === 0) return null;
-                      return (
-                        <div key={dbValue}>
-                          <div className="px-3 py-2 flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            <Icon className="w-3.5 h-3.5" />
-                            {t(`categories.roots.${key}`)}
-                          </div>
-                          {rootCategories
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map((c) => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setCategoryId(c.id);
-                                  setDropdownOpen(false);
-                                }}
-                                className={`w-full px-3 py-2 pl-9 flex items-center justify-between text-sm hover:bg-secondary transition-colors ${
-                                  categoryId === c.id ? 'bg-secondary' : ''
-                                }`}
-                              >
-                                <span>{c.name}</span>
-                                {categoryId === c.id && <Check className="w-4 h-4 text-foreground" />}
-                              </button>
-                            ))}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </div>
+            <CategoryDropdown
+              categories={categories}
+              selectedId={categoryId}
+              onSelect={setCategoryId}
+              placeholder={t('items.categoryPlaceholder')}
+              variant="form"
+              showClearOption={false}
+              emptyState={
+                <EmptyState
+                  icon={<FolderPlus className="w-5 h-5 text-muted-foreground" />}
+                  title={t('items.noCategoriesYet')}
+                  description={t('items.createCategoriesFirst')}
+                  action={{
+                    label: t('categories.addCategory'),
+                    href: '/categories',
+                  }}
+                  size="sm"
+                />
+              }
+            />
           </div>
 
           {/* Image */}

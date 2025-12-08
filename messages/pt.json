@@ -18,7 +18,9 @@
     "showFavorites": "Mostrar apenas favoritos",
     "showingFavorites": "Mostrando favoritos (clique para ver todos)",
     "previous": "Anterior",
-    "next": "Próximo"
+    "next": "Próximo",
+    "cancel": "Cancelar",
+    "save": "Salvar"
   },
   "nav": {
     "home": "Início",
@@ -95,6 +97,9 @@
     "noFavoriteItems": "Nenhuma peça favorita ainda. Marque algumas para vê-las aqui!",
     "failedToUpdateFavorite": "Falha ao atualizar favorito",
     "deleteConfirm": "Excluir \"{name}\"?",
+    "itemUpdated": "Peça atualizada!",
+    "failedToUpdate": "Falha ao atualizar peça",
+    "selectCategory": "Selecionar categoria",
     "filterByCategory": "Filtrar por categoria",
     "noCategoriesYet": "Nenhuma categoria ainda",
     "createCategoriesFirst": "Crie categorias primeiro para organizar suas peças"
@@ -265,6 +270,7 @@
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
     "deleteItem": "Excluir peça",
+    "editItem": "Editar peça",
     "deleteOutfit": "Excluir look",
     "deleteCategory": "Excluir {name}",
     "addToFavorites": "Adicionar aos favoritos",

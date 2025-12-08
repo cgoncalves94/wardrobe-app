@@ -18,7 +18,9 @@
     "showFavorites": "Show favorites only",
     "showingFavorites": "Showing favorites (click to show all)",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "nav": {
     "home": "Home",
@@ -95,6 +97,9 @@
     "noFavoriteItems": "No favorite items yet. Star some items to see them here!",
     "failedToUpdateFavorite": "Failed to update favorite",
     "deleteConfirm": "Delete \"{name}\"?",
+    "itemUpdated": "Item updated!",
+    "failedToUpdate": "Failed to update item",
+    "selectCategory": "Select category",
     "filterByCategory": "Filter by category",
     "noCategoriesYet": "No categories yet",
     "createCategoriesFirst": "Create categories first to organize your items"
@@ -265,6 +270,7 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "deleteItem": "Delete item",
+    "editItem": "Edit item",
     "deleteOutfit": "Delete outfit",
     "deleteCategory": "Delete {name}",
     "addToFavorites": "Add to favorites",

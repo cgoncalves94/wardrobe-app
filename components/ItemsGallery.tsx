@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight, Pencil, Check, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
@@ -56,6 +56,12 @@ export default function ItemsGallery({
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Edit mode state
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
   const supabase = createClient();
   const t = useTranslations();
   const format = useFormatter();
@@ -63,13 +69,17 @@ export default function ItemsGallery({
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setOpen(false);
-        setSelectedItem(null);
+        if (editing) {
+          cancelEditing();
+        } else {
+          setOpen(false);
+          setSelectedItem(null);
+        }
       }
     }
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
+  }, [open, editing]);
 
   const setCategory = (id: string | null) => {
     if (onSelectCategory) onSelectCategory(id);
@@ -177,6 +187,58 @@ export default function ItemsGallery({
     }
   }
 
+  function startEditing(item: GalleryItem) {
+    setEditName(item.name);
+    setEditCategoryId(item.category_id || null);
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+    setEditName("");
+    setEditCategoryId(null);
+  }
+
+  async function handleSaveEdit() {
+    if (!selectedItem || !editName.trim()) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("items")
+        .update({
+          name: editName.trim(),
+          category_id: editCategoryId,
+        })
+        .eq("id", selectedItem.id);
+
+      if (error) throw error;
+
+      // Find the new category name
+      const newCategory = categories.find((c) => c.id === editCategoryId);
+
+      // Update local state
+      const updatedItem = {
+        ...selectedItem,
+        name: editName.trim(),
+        category_id: editCategoryId,
+        category_name: newCategory?.name || null,
+      };
+
+      setItems((prev) =>
+        prev.map((i) => (i.id === selectedItem.id ? updatedItem : i))
+      );
+      setSelectedItem(updatedItem);
+      setEditing(false);
+      toast.success(t("items.itemUpdated"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("items.failedToUpdate");
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6 pb-4">
       {/* Header */}
@@ -254,7 +316,7 @@ export default function ItemsGallery({
       {/* Grid */}
       {filteredItems.length > 0 ? (
         <>
-        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {paginatedItems.map((it, index) => (
             <li
               key={it.id}
@@ -289,20 +351,22 @@ export default function ItemsGallery({
                   </div>
                 )}
               </button>
-              <div className="p-4 space-y-1">
-                <div className="font-medium">{it.name}</div>
-                <div className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-secondary text-muted-foreground">
-                  {it.category_name || t('common.uncategorized')}
+              <div className="p-2.5 sm:p-4 space-y-1">
+                <div className="font-medium text-sm sm:text-base truncate">{it.name}</div>
+                <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded bg-secondary">
+                    {it.category_name || t('common.uncategorized')}
+                  </span>
+                  {it.created_at && (
+                    <span>
+                      • {format.dateTime(new Date(it.created_at), {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
                 </div>
-                {it.created_at && (
-                  <div className="text-xs text-muted-foreground">
-                    {t('common.added')} {format.dateTime(new Date(it.created_at), {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
-                )}
               </div>
             </li>
           ))}
@@ -363,7 +427,7 @@ export default function ItemsGallery({
       {/* Lightbox */}
       {open && selectedItem && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm overflow-y-auto"
           onClick={() => {
             setOpen(false);
             setSelectedItem(null);
@@ -372,7 +436,7 @@ export default function ItemsGallery({
           aria-modal="true"
         >
           <div
-            className="relative max-h-[90vh] w-full max-w-3xl"
+            className="relative flex flex-col items-center w-full max-w-3xl my-auto overflow-visible"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button */}
@@ -388,76 +452,142 @@ export default function ItemsGallery({
               <X className="w-6 h-6" />
             </button>
 
-            {/* Image */}
-            {selectedItem.image_url ? (
-              <Image
-                src={selectedItem.image_url}
-                alt={selectedItem.name}
-                width={1600}
-                height={1600}
-                className="h-auto w-full rounded-xl object-contain"
-                sizes="(max-width: 1024px) 100vw, 1024px"
-              />
-            ) : (
-              <div className="aspect-square w-full rounded-xl bg-secondary flex items-center justify-center text-muted-foreground">
-                {t('common.noImage')}
-              </div>
-            )}
-
-            {/* Info bar */}
-            <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-white/10 backdrop-blur-md p-4">
-              <div className="min-w-0">
-                <h3 className="font-medium text-white truncate">
-                  {selectedItem.name}
-                </h3>
-                <p className="text-sm text-white/60">
-                  {selectedItem.category_name || t('common.uncategorized')}
-                  {selectedItem.created_at && (
-                    <> &bull; {t('common.added')} {format.dateTime(new Date(selectedItem.created_at), {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}</>
-                  )}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(selectedItem);
-                  }}
-                  className={`p-2.5 rounded-lg transition-colors ${
-                    selectedItem.is_favorite
-                      ? "bg-white/20 text-white"
-                      : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                  }`}
-                  aria-label={
-                    selectedItem.is_favorite
-                      ? t('aria.removeFromFavorites')
-                      : t('aria.addToFavorites')
-                  }
-                >
-                  <Star
-                    className={`w-5 h-5 ${
-                      selectedItem.is_favorite ? "fill-current" : ""
-                    }`}
+            {/* Fixed-size content wrapper for consistent lightbox dimensions */}
+            <div className="flex flex-col w-[90vw] sm:w-[500px] md:w-[600px] max-w-full">
+              {/* Image container with fixed aspect ratio */}
+              <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-black/20">
+                {selectedItem.image_url ? (
+                  <Image
+                    src={selectedItem.image_url}
+                    alt={selectedItem.name}
+                    fill
+                    sizes="(max-width: 640px) 90vw, 600px"
+                    className="object-contain"
                   />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(selectedItem);
-                  }}
-                  disabled={deleting}
-                  className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
-                  aria-label={t('aria.deleteItem')}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                    {t('common.noImage')}
+                  </div>
+                )}
               </div>
+
+              {/* Info bar */}
+              <div className="mt-4 w-full rounded-xl bg-white/10 backdrop-blur-md p-4 overflow-visible">
+              {editing ? (
+                /* Edit mode */
+                <div className="space-y-3 overflow-visible">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder={t("items.namePlaceholder")}
+                    className="w-full h-10 px-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                    autoFocus
+                  />
+                  <div className="flex items-center justify-between gap-2 overflow-visible">
+                    <CategoryDropdown
+                        categories={categories}
+                        selectedId={editCategoryId}
+                        onSelect={setEditCategoryId}
+                        placeholder={t("items.categoryPlaceholder")}
+                        variant="lightbox"
+                        showClearOption={false}
+                      />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        disabled={saving}
+                        className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                        aria-label={t("common.cancel")}
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveEdit}
+                        disabled={saving || !editName.trim()}
+                        className="p-2.5 rounded-lg bg-white text-black hover:bg-white/90 transition-colors disabled:opacity-50"
+                        aria-label={t("common.save")}
+                      >
+                        {saving ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Check className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* View mode */
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-white truncate">
+                      {selectedItem.name}
+                    </h3>
+                    <p className="text-sm text-white/60">
+                      {selectedItem.category_name || t("common.uncategorized")}
+                      {selectedItem.created_at && (
+                        <> • {format.dateTime(new Date(selectedItem.created_at), {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditing(selectedItem);
+                      }}
+                      className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                      aria-label={t("aria.editItem")}
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(selectedItem);
+                      }}
+                      className={`p-2.5 rounded-lg transition-colors ${
+                        selectedItem.is_favorite
+                          ? "bg-white/20 text-white"
+                          : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                      }`}
+                      aria-label={
+                        selectedItem.is_favorite
+                          ? t("aria.removeFromFavorites")
+                          : t("aria.addToFavorites")
+                      }
+                    >
+                      <Star
+                        className={`w-5 h-5 ${
+                          selectedItem.is_favorite ? "fill-current" : ""
+                        }`}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(selectedItem);
+                      }}
+                      disabled={deleting}
+                      className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+                      aria-label={t("aria.deleteItem")}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             </div>
           </div>
         </div>

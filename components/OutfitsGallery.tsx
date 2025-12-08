@@ -292,7 +292,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
         </div>
       ) : filteredItems.length > 0 ? (
         <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {paginatedItems.map((outfit) => (
           <button
             key={outfit.id}
@@ -323,9 +323,9 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
                 </div>
               )}
             </div>
-            <div className="p-4">
-              <h3 className="font-medium truncate">{outfit.name}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="p-2.5 sm:p-4">
+              <h3 className="font-medium text-sm sm:text-base truncate">{outfit.name}</h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                 {format.dateTime(new Date(outfit.created_at), {
                   month: "short",
                   day: "numeric",
