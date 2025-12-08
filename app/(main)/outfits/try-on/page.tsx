@@ -19,8 +19,9 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
 import { urlToBase64 } from "@/lib/images.client";
-import type { Item, Outfit } from "@/types";
+import type { Item, Outfit, OutfitFolder } from "@/types";
 import { toast } from "@/components/ui/sonner";
+import FolderDropdown from "@/components/FolderDropdown";
 import {
   Sparkles,
   X,
@@ -91,6 +92,10 @@ export default function TryOnPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Folder state
+  const [folders, setFolders] = useState<OutfitFolder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
   const supabase = createClient();
   const router = useRouter();
   const t = useTranslations();
@@ -107,7 +112,7 @@ export default function TryOnPage() {
 
   // Lock body scroll when mobile result modal is open
   useEffect(() => {
-    const isMobile = window.innerWidth < 1024;
+    const isMobile = window.innerWidth < 1280; // xl breakpoint
     if (isMobile && generatedImage && !generating) {
       document.body.style.overflow = "hidden";
       return () => {
@@ -131,8 +136,8 @@ export default function TryOnPage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id || null);
 
-      // Load items and outfits in parallel
-      const [itemsResult, outfitsResult] = await Promise.all([
+      // Load items, outfits, and folders in parallel
+      const [itemsResult, outfitsResult, foldersResult] = await Promise.all([
         supabase
           .from("items")
           .select("id, name, image_url, category_id, categories(name, root)")
@@ -144,10 +149,16 @@ export default function TryOnPage() {
           .eq("user_id", user?.id)
           .eq("type", "outfit") // Only show outfit generations, not try-ons
           .order("created_at", { ascending: false }),
+        supabase
+          .from("outfit_folders")
+          .select("*")
+          .eq("user_id", user?.id)
+          .order("name"),
       ]);
 
       setItems((itemsResult.data || []) as unknown as Item[]);
       setOutfits((outfitsResult.data || []) as Outfit[]);
+      setFolders((foldersResult.data || []) as OutfitFolder[]);
       setLoading(false);
     }
     loadData();
@@ -293,6 +304,7 @@ export default function TryOnPage() {
         is_favorite: false,
         user_id: userId,
         type: "tryon", // Mark as virtual try-on, not a regular outfit
+        folder_id: selectedFolderId,
       });
 
       if (error) throw error;
@@ -349,9 +361,9 @@ export default function TryOnPage() {
       </div>
 
       {/* Main Content - Two Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-6">
         {/* Left Column: Selection Panel */}
-        <div className={generating || generatedImage ? "hidden lg:block" : ""}>
+        <div className={generating || generatedImage ? "hidden xl:block" : ""}>
           <div className="space-y-4">
             {/* Step 1: Upload Photo */}
             <div className="p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
@@ -621,7 +633,7 @@ export default function TryOnPage() {
               type="button"
               onClick={handleGenerate}
               disabled={generating || !canGenerate}
-              className="w-full lg:hidden flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.98]"
+              className="w-full xl:hidden flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-40 transition-all active:scale-[0.98]"
             >
               {generating ? (
                 <>
@@ -639,8 +651,8 @@ export default function TryOnPage() {
         </div>
 
         {/* Right Column: Preview Panel (Desktop) */}
-        <div className="hidden lg:flex lg:flex-col">
-          <div className="flex-1 p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04] flex flex-col min-h-[400px]">
+        <div className="hidden xl:flex xl:flex-col min-h-0">
+          <div className="flex-1 p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04] flex flex-col min-h-[280px]">
             {/* Preview Header */}
             <div className="flex items-center gap-2.5 mb-4">
               <Wand2 className="w-4 h-4 text-muted-foreground" />
@@ -739,19 +751,28 @@ export default function TryOnPage() {
               {/* Save Controls - Overlaid on image when result exists */}
               {generatedImage && !generating && (
                 <div className="absolute inset-x-0 bottom-0 p-4">
-                  <div className="flex gap-2 items-center">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <input
                       type="text"
                       placeholder={t("outfits.tryOn.namePlaceholder")}
                       value={outfitName}
                       onChange={(e) => setOutfitName(e.target.value)}
-                      className="flex-1 h-11 px-4 rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                      className="flex-1 min-w-[120px] h-11 px-4 rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                    />
+                    <FolderDropdown
+                      folders={folders}
+                      selectedId={selectedFolderId}
+                      onSelect={setSelectedFolderId}
+                      placeholder={t("folders.selectFolder")}
+                      variant="lightbox"
+                      showClearOption={true}
+                      clearLabel={t("folders.noFolder")}
                     />
                     <button
                       type="button"
                       onClick={handleSave}
                       disabled={saving || !outfitName.trim()}
-                      className="h-11 px-5 flex items-center justify-center gap-2 rounded-xl bg-white text-black font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
+                      className="flex-shrink-0 h-11 px-4 flex items-center justify-center gap-2 rounded-xl bg-white text-black font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       {t("outfits.save")}
@@ -760,7 +781,7 @@ export default function TryOnPage() {
                       type="button"
                       onClick={handleGenerate}
                       aria-label={t("outfits.tryOn.regenerate")}
-                      className="w-11 h-11 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 transition-colors active:scale-[0.98]"
+                      className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 transition-colors active:scale-[0.98]"
                     >
                       <RefreshCw className="w-4 h-4" />
                     </button>
@@ -800,7 +821,7 @@ export default function TryOnPage() {
 
       {/* Mobile: Full-Screen Loading Overlay */}
       {generating && (
-        <div className="fixed inset-0 z-[60] lg:hidden flex items-center justify-center bg-background/98 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] xl:hidden flex items-center justify-center bg-background/98 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-6 px-8 text-center">
             {/* Animated icon container */}
             <div className="relative">
@@ -820,7 +841,7 @@ export default function TryOnPage() {
 
       {/* Mobile: Result Modal (keeps navbar visible) */}
       {!generating && generatedImage && (
-        <div className="fixed inset-0 z-40 lg:hidden overflow-hidden bg-background">
+        <div className="fixed inset-0 z-40 xl:hidden overflow-hidden bg-background">
           {/* Modal container - positioned between header and navbar */}
           <div className="absolute inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.75rem)] bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.75rem)] flex flex-col bg-secondary/30 rounded-2xl overflow-hidden shadow-2xl border border-foreground/[0.06]">
             {/* Close button */}
@@ -866,14 +887,23 @@ export default function TryOnPage() {
                   onChange={(e) => setOutfitName(e.target.value)}
                   className="flex-1 h-11 px-4 rounded-xl bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm"
                 />
+                <FolderDropdown
+                  folders={folders}
+                  selectedId={selectedFolderId}
+                  onSelect={setSelectedFolderId}
+                  placeholder={t("folders.selectFolder")}
+                  showClearOption={true}
+                  clearLabel={t("folders.noFolder")}
+                  compact
+                />
                 <button
                   type="button"
                   onClick={handleSave}
                   disabled={saving || !outfitName.trim()}
-                  className="h-11 px-5 flex items-center justify-center gap-2 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
+                  aria-label={t("outfits.save")}
+                  className="w-11 h-11 flex items-center justify-center rounded-xl bg-foreground text-background disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {t("outfits.save")}
                 </button>
                 <button
                   type="button"

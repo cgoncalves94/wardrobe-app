@@ -16,6 +16,8 @@ interface ToggleButtonGroupProps<T extends string> {
   disabled?: boolean;
   size?: "sm" | "md";
   stretch?: boolean;
+  /** Hide labels on small screens, show only icons */
+  compactOnMobile?: boolean;
 }
 
 /**
@@ -28,6 +30,7 @@ export default function ToggleButtonGroup<T extends string>({
   disabled = false,
   size = "sm",
   stretch = false,
+  compactOnMobile = false,
 }: ToggleButtonGroupProps<T>) {
   const sizeClasses = {
     sm: "px-2.5 py-1.5 text-xs gap-1",
@@ -37,7 +40,7 @@ export default function ToggleButtonGroup<T extends string>({
   return (
     <div
       className={`flex items-center p-0.5 bg-secondary/60 rounded-lg ${
-        stretch ? "flex-1" : ""
+        stretch ? "flex-1" : "flex-shrink-0"
       }`}
     >
       {options.map((option) => {
@@ -48,7 +51,7 @@ export default function ToggleButtonGroup<T extends string>({
             type="button"
             onClick={() => onChange(option.value)}
             disabled={disabled}
-            className={`flex items-center justify-center rounded-md font-medium transition-all ${
+            className={`flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-all ${
               sizeClasses[size]
             } ${stretch ? "flex-1" : ""} ${
               isActive
@@ -57,7 +60,7 @@ export default function ToggleButtonGroup<T extends string>({
             } ${disabled ? "opacity-60" : ""}`}
           >
             {option.icon}
-            {option.label}
+            <span className={compactOnMobile ? "hidden min-[400px]:inline" : ""}>{option.label}</span>
           </button>
         );
       })}

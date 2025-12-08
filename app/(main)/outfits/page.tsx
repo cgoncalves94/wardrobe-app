@@ -6,20 +6,57 @@ import OutfitsGallery from "@/components/OutfitsGallery";
 import { getUserSubscription } from "@/lib/supabase/subscription";
 import { isProRoute } from "@/lib/features";
 import ProBadge from "@/components/ProBadge";
+import type { OutfitFolder } from "@/types";
 
 export const revalidate = 0;
 
 async function getOutfitsByType(userId: string, type: "outfit" | "tryon") {
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  // Try with folder join first, fallback to basic query if outfit_folders table doesn't exist
+  let { data, error } = await supabase
     .from("outfits")
-    .select("*")
+    .select("*, outfit_folders(name)")
     .eq("user_id", userId)
     .eq("type", type)
     .order("created_at", { ascending: false });
 
+  // If folder join fails (table doesn't exist), fetch without it
   if (error) {
-    console.error(`Error fetching ${type}s:`, error);
+    const fallback = await supabase
+      .from("outfits")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("type", type)
+      .order("created_at", { ascending: false });
+
+    if (fallback.error) {
+      console.error(`Error fetching ${type}s:`, fallback.error);
+      return [];
+    }
+    return (fallback.data || []).map((outfit) => ({
+      ...outfit,
+      folder_name: null,
+    }));
+  }
+
+  // Map folder name to outfit for display
+  return (data || []).map((outfit) => ({
+    ...outfit,
+    folder_name: outfit.outfit_folders?.name || null,
+  }));
+}
+
+async function getFolders(userId: string): Promise<OutfitFolder[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("outfit_folders")
+    .select("*")
+    .eq("user_id", userId)
+    .order("name");
+
+  if (error) {
+    console.error("Error fetching folders:", error);
     return [];
   }
   return data || [];
@@ -35,10 +72,11 @@ export default async function OutfitsPage() {
     return <div className="text-center py-12 text-muted-foreground">{t('auth.loginRequired', { resource: t('nav.outfits').toLowerCase() })}</div>;
   }
 
-  // Fetch outfits and try-ons in parallel
-  const [outfits, tryons] = await Promise.all([
+  // Fetch outfits, try-ons, and folders in parallel
+  const [outfits, tryons, folders] = await Promise.all([
     getOutfitsByType(user.id, "outfit"),
     getOutfitsByType(user.id, "tryon"),
+    getFolders(user.id),
   ]);
 
   return (
@@ -92,7 +130,7 @@ export default async function OutfitsPage() {
 
       {/* Saved Outfits & Try-Ons */}
       <div>
-        <OutfitsGallery outfits={outfits} tryons={tryons} />
+        <OutfitsGallery outfits={outfits} tryons={tryons} folders={folders} />
       </div>
     </div>
   );

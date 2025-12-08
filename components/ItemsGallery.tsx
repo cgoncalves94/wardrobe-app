@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight, Pencil, Check, Loader2 } from "lucide-react";
+import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
+import { useLightboxEdit } from "@/hooks/use-lightbox-edit";
 import CategoryDropdown from "@/components/CategoryDropdown";
+import LightboxEditForm from "@/components/LightboxEditForm";
 import type { CategoryRoot } from "@/lib/categories";
 
 /** Responsive page sizes: 6 for 1-col mobile, 12 for 2-4 col desktop */
@@ -56,11 +58,8 @@ export default function ItemsGallery({
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Edit mode state
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  // Edit mode state (shared hook)
+  const [editState, editActions] = useLightboxEdit<string | null>(null);
 
   const supabase = createClient();
   const t = useTranslations();
@@ -69,8 +68,8 @@ export default function ItemsGallery({
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        if (editing) {
-          cancelEditing();
+        if (editState.editing) {
+          editActions.cancelEditing();
         } else {
           setOpen(false);
           setSelectedItem(null);
@@ -79,7 +78,7 @@ export default function ItemsGallery({
     }
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open, editing]);
+  }, [open, editState.editing, editActions]);
 
   const setCategory = (id: string | null) => {
     if (onSelectCategory) onSelectCategory(id);
@@ -187,41 +186,29 @@ export default function ItemsGallery({
     }
   }
 
-  function startEditing(item: GalleryItem) {
-    setEditName(item.name);
-    setEditCategoryId(item.category_id || null);
-    setEditing(true);
-  }
-
-  function cancelEditing() {
-    setEditing(false);
-    setEditName("");
-    setEditCategoryId(null);
-  }
-
   async function handleSaveEdit() {
-    if (!selectedItem || !editName.trim()) return;
+    if (!selectedItem || !editState.editName.trim()) return;
 
-    setSaving(true);
+    editActions.setSaving(true);
     try {
       const { error } = await supabase
         .from("items")
         .update({
-          name: editName.trim(),
-          category_id: editCategoryId,
+          name: editState.editName.trim(),
+          category_id: editState.editRelationId,
         })
         .eq("id", selectedItem.id);
 
       if (error) throw error;
 
       // Find the new category name
-      const newCategory = categories.find((c) => c.id === editCategoryId);
+      const newCategory = categories.find((c) => c.id === editState.editRelationId);
 
       // Update local state
       const updatedItem = {
         ...selectedItem,
-        name: editName.trim(),
-        category_id: editCategoryId,
+        name: editState.editName.trim(),
+        category_id: editState.editRelationId,
         category_name: newCategory?.name || null,
       };
 
@@ -229,13 +216,13 @@ export default function ItemsGallery({
         prev.map((i) => (i.id === selectedItem.id ? updatedItem : i))
       );
       setSelectedItem(updatedItem);
-      setEditing(false);
+      editActions.cancelEditing();
       toast.success(t("items.itemUpdated"));
     } catch (error) {
       const message = error instanceof Error ? error.message : t("items.failedToUpdate");
       toast.error(message);
     } finally {
-      setSaving(false);
+      editActions.setSaving(false);
     }
   }
 
@@ -473,52 +460,26 @@ export default function ItemsGallery({
 
               {/* Info bar */}
               <div className="mt-4 w-full rounded-xl bg-white/10 backdrop-blur-md p-4 overflow-visible">
-              {editing ? (
-                /* Edit mode */
-                <div className="space-y-3 overflow-visible">
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder={t("items.namePlaceholder")}
-                    className="w-full h-10 px-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
-                    autoFocus
-                  />
-                  <div className="flex items-center justify-between gap-2 overflow-visible">
+              {editState.editing ? (
+                <LightboxEditForm
+                  name={editState.editName}
+                  onNameChange={editActions.setEditName}
+                  namePlaceholder={t("items.namePlaceholder")}
+                  dropdown={
                     <CategoryDropdown
-                        categories={categories}
-                        selectedId={editCategoryId}
-                        onSelect={setEditCategoryId}
-                        placeholder={t("items.categoryPlaceholder")}
-                        variant="lightbox"
-                        showClearOption={false}
-                      />
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={cancelEditing}
-                        disabled={saving}
-                        className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
-                        aria-label={t("common.cancel")}
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveEdit}
-                        disabled={saving || !editName.trim()}
-                        className="p-2.5 rounded-lg bg-white text-black hover:bg-white/90 transition-colors disabled:opacity-50"
-                        aria-label={t("common.save")}
-                      >
-                        {saving ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Check className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                      categories={categories}
+                      selectedId={editState.editRelationId}
+                      onSelect={editActions.setEditRelationId}
+                      placeholder={t("items.categoryPlaceholder")}
+                      variant="lightbox"
+                      showClearOption={false}
+                    />
+                  }
+                  onSave={handleSaveEdit}
+                  onCancel={editActions.cancelEditing}
+                  saving={editState.saving}
+                  saveDisabled={!editState.editName.trim()}
+                />
               ) : (
                 /* View mode */
                 <div className="flex items-center justify-between gap-4">
@@ -542,7 +503,7 @@ export default function ItemsGallery({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        startEditing(selectedItem);
+                        editActions.startEditing(selectedItem.name, selectedItem.category_id || null);
                       }}
                       className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
                       aria-label={t("aria.editItem")}

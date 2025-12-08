@@ -17,8 +17,9 @@ import EmptyState from "@/components/EmptyState";
 import ToggleButtonGroup from "@/components/ToggleButtonGroup";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
-import type { Item } from "@/types";
+import type { Item, OutfitFolder } from "@/types";
 import { toast } from "@/components/ui/sonner";
+import FolderDropdown from "@/components/FolderDropdown";
 import {
   Sparkles,
   Wand2,
@@ -102,6 +103,10 @@ export default function GenerateOutfitPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Folder state
+  const [folders, setFolders] = useState<OutfitFolder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
   const supabase = createClient();
   const router = useRouter();
   const t = useTranslations();
@@ -117,7 +122,7 @@ export default function GenerateOutfitPage() {
 
   // Lock body scroll when mobile result modal is open
   useEffect(() => {
-    const isMobile = window.innerWidth < 1024;
+    const isMobile = window.innerWidth < 1280; // xl breakpoint
     if (isMobile && generatedImage && !generating) {
       document.body.style.overflow = "hidden";
       return () => {
@@ -133,13 +138,22 @@ export default function GenerateOutfitPage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id || null);
 
-      const { data } = await supabase
-        .from("items")
-        .select("id, name, image_url, category_id, categories(name, root)")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
+      // Fetch items and folders in parallel
+      const [itemsResult, foldersResult] = await Promise.all([
+        supabase
+          .from("items")
+          .select("id, name, image_url, category_id, categories(name, root)")
+          .eq("user_id", user?.id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("outfit_folders")
+          .select("*")
+          .eq("user_id", user?.id)
+          .order("name"),
+      ]);
 
-      setItems((data || []) as unknown as Item[]);
+      setItems((itemsResult.data || []) as unknown as Item[]);
+      setFolders((foldersResult.data || []) as OutfitFolder[]);
       setLoading(false);
     }
     loadData();
@@ -193,32 +207,44 @@ export default function GenerateOutfitPage() {
     if (!showMobileActionBar) return null;
 
     return (
-      <div className="mt-4 lg:hidden p-4 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
-        <div className="space-y-3">
-          {/* Options Row */}
-          <div className="flex items-center gap-2">
+      <div className="mt-4 xl:hidden mb-20 lg:mb-0 p-4 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
+        {/* Single row on sm+, stacked on small phones */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* On small phones: both toggles in one row. On sm+: just layout toggle */}
+          <div className="flex items-center justify-between gap-2 sm:contents">
             {/* Layout Toggle */}
-            <ToggleButtonGroup
-              options={[
-                { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-                { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-3.5 h-3.5" /> },
-              ]}
-              value={useMannequin ? "mannequin" : "flatlay"}
-              onChange={(val) => setUseMannequin(val === "mannequin")}
-              size="sm"
-              stretch={false}
-            />
+            <div className="sm:flex-shrink-0">
+              <ToggleButtonGroup
+                options={[
+                  { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+                  { value: "mannequin" as const, label: t("outfits.layoutMannequin"), icon: <PersonStanding className="w-3.5 h-3.5" /> },
+                ]}
+                value={useMannequin ? "mannequin" : "flatlay"}
+                onChange={(val) => setUseMannequin(val === "mannequin")}
+                size="sm"
+              />
+            </div>
+
+            {/* Description - shown on md+ (between toggles) */}
+            <span className="hidden md:block flex-1 min-w-0 text-xs text-muted-foreground truncate">
+              {useMannequin ? t("outfits.layoutMannequinDesc") : t("outfits.layoutFlatLayDesc")}
+            </span>
+            {/* Spacer when description hidden */}
+            <div className="hidden sm:block md:hidden flex-1 min-w-0" />
 
             {/* Gender Toggle */}
-            <ToggleButtonGroup
-              options={[
-                { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-3.5 h-3.5" /> },
-                { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-3.5 h-3.5" /> },
-              ]}
-              value={mannequinGender}
-              onChange={(val) => setMannequinGender(val as MannequinGender)}
-              size="sm"
-            />
+            <div className="sm:flex-shrink-0">
+              <ToggleButtonGroup
+                options={[
+                  { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-3.5 h-3.5" /> },
+                  { value: "male" as const, label: genderLabels.male, icon: <Mars className="w-3.5 h-3.5" /> },
+                ]}
+                value={mannequinGender}
+                onChange={(val) => setMannequinGender(val as MannequinGender)}
+                size="sm"
+                compactOnMobile
+              />
+            </div>
           </div>
 
           {/* Generate Button */}
@@ -226,7 +252,7 @@ export default function GenerateOutfitPage() {
             type="button"
             onClick={handleGenerate}
             disabled={activeTab === "fromItems" ? !hasSelection : !itemsDescription.trim()}
-            className="w-full flex items-center justify-center gap-2 h-12 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-40 transition-all active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 h-12 sm:h-auto sm:px-4 sm:py-2 rounded-xl sm:rounded-lg bg-foreground text-background font-medium text-sm disabled:opacity-40 transition-all active:scale-[0.98] sm:flex-shrink-0"
           >
             <Wand2 className="w-4 h-4" />
             {t("outfits.generateOutfit")}
@@ -313,6 +339,7 @@ export default function GenerateOutfitPage() {
         is_favorite: false,
         user_id: userId,
         type: "outfit",
+        folder_id: selectedFolderId,
       });
 
       if (error) throw error;
@@ -420,12 +447,12 @@ export default function GenerateOutfitPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 xl:gap-6">
         {/* Selection Area - grid stacking renders both tabs, shows one, height = max of both */}
         <div className="grid min-w-0">
           {/* AI Picks Tab - always rendered, opacity controlled for instant switch */}
-          <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${activeTab !== "aiPicks" ? "opacity-0 pointer-events-none max-h-0 overflow-hidden lg:max-h-none lg:overflow-visible" : "opacity-100"}`}>
-            <div className="flex flex-col gap-4 lg:h-full">
+          <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${activeTab !== "aiPicks" ? "opacity-0 pointer-events-none max-h-0 overflow-hidden xl:max-h-none xl:overflow-visible" : "opacity-100"}`}>
+            <div className="flex flex-col gap-4 xl:h-full">
               {/* Description Input */}
               <div className="p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
                 <div className="flex items-center gap-2.5 mb-3">
@@ -518,8 +545,8 @@ export default function GenerateOutfitPage() {
           </div>
 
           {/* From Items Tab - always rendered, opacity controlled for instant switch */}
-          <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${activeTab !== "fromItems" ? "opacity-0 pointer-events-none max-h-0 overflow-hidden lg:max-h-none lg:overflow-visible" : "opacity-100"}`}>
-            <div className={activeTab === "fromItems" && (generating || generatedImage) ? "hidden lg:block" : ""}>
+          <div className={`[grid-area:1/1] min-w-0 transition-opacity duration-0 ${activeTab !== "fromItems" ? "opacity-0 pointer-events-none max-h-0 overflow-hidden xl:max-h-none xl:overflow-visible" : "opacity-100"}`}>
+            <div className={activeTab === "fromItems" && (generating || generatedImage) ? "hidden xl:block" : ""}>
               {/* Empty state when no items in wardrobe */}
               {items.length === 0 ? (
                 <div className="p-5 rounded-2xl bg-secondary/30 border-2 border-dashed border-foreground/[0.08]">
@@ -625,9 +652,9 @@ export default function GenerateOutfitPage() {
         </div>
 
         {/* Right Column - Preview + Action Bar (always visible on desktop) */}
-        <div className="hidden lg:flex lg:flex-col lg:gap-4">
+        <div className="hidden xl:flex xl:flex-col xl:gap-4 min-h-0">
           {/* Preview Panel */}
-          <div className="flex-1 p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04] flex flex-col min-h-[400px]">
+          <div className="flex-1 p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04] flex flex-col min-h-[280px]">
             {/* Preview Header */}
             <div className="flex items-center gap-2.5 mb-4">
               <Wand2 className="w-4 h-4 text-muted-foreground" />
@@ -699,19 +726,28 @@ export default function GenerateOutfitPage() {
               {/* Save Controls - Overlaid on image when result exists */}
               {generatedImage && !generating && (
                 <div className="absolute inset-x-0 bottom-0 p-4">
-                  <div className="flex gap-2 items-center">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <input
                       type="text"
                       placeholder={t("outfits.nameOutfitPlaceholder")}
                       value={outfitName}
                       onChange={(e) => setOutfitName(e.target.value)}
-                      className="flex-1 h-11 px-4 rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                      className="flex-1 min-w-[120px] h-11 px-4 rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
+                    />
+                    <FolderDropdown
+                      folders={folders}
+                      selectedId={selectedFolderId}
+                      onSelect={setSelectedFolderId}
+                      placeholder={t("folders.selectFolder")}
+                      variant="lightbox"
+                      showClearOption={true}
+                      clearLabel={t("folders.noFolder")}
                     />
                     <button
                       type="button"
                       onClick={handleSave}
                       disabled={saving || !outfitName.trim()}
-                      className="h-11 px-5 flex items-center justify-center gap-2 rounded-xl bg-white text-black font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
+                      className="flex-shrink-0 h-11 px-4 flex items-center justify-center gap-2 rounded-xl bg-white text-black font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                       {t("outfits.save")}
@@ -721,7 +757,7 @@ export default function GenerateOutfitPage() {
                       onClick={handleGenerate}
                       disabled={generating}
                       aria-label={t("aria.regenerateOutfit")}
-                      className="w-11 h-11 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 transition-colors active:scale-[0.98]"
+                      className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 transition-colors active:scale-[0.98]"
                     >
                       <RefreshCw className="w-4 h-4" />
                     </button>
@@ -733,9 +769,9 @@ export default function GenerateOutfitPage() {
 
           {/* Desktop Action Bar - inside right column for consistent position */}
           <div className="flex-shrink-0">
-            <div className="flex items-center justify-between gap-4 p-3 rounded-xl bg-secondary/30 border border-foreground/[0.04]">
-              {/* Layout Options */}
-              <div className={`flex items-center gap-4 ${actionBarDimmed ? "opacity-60" : ""} ${actionControlsLocked ? "pointer-events-none" : ""}`}>
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-foreground/[0.04]">
+              {/* Layout Toggle */}
+              <div className={`flex-shrink-0 ${actionBarDimmed ? "opacity-60" : ""} ${actionControlsLocked ? "pointer-events-none" : ""}`}>
                 <ToggleButtonGroup
                   options={[
                     { value: "flatlay" as const, label: t("outfits.layoutFlatLay"), icon: <LayoutGrid className="w-4 h-4" /> },
@@ -744,8 +780,19 @@ export default function GenerateOutfitPage() {
                   value={useMannequin ? "mannequin" : "flatlay"}
                   onChange={(val) => setUseMannequin(val === "mannequin")}
                   disabled={isLocked}
-                  size="md"
+                  size="sm"
                 />
+              </div>
+
+              {/* Description (show when space available) */}
+              <span className="hidden 2xl:block flex-1 min-w-0 text-sm text-muted-foreground truncate">
+                {useMannequin ? t("outfits.layoutMannequinDesc") : t("outfits.layoutFlatLayDesc")}
+              </span>
+              {/* Spacer when description is hidden */}
+              <div className="flex-1 min-w-0 2xl:hidden" />
+
+              {/* Gender Toggle */}
+              <div className={`flex-shrink-0 ${actionBarDimmed ? "opacity-60" : ""} ${actionControlsLocked ? "pointer-events-none" : ""}`}>
                 <ToggleButtonGroup
                   options={[
                     { value: "female" as const, label: genderLabels.female, icon: <Venus className="w-4 h-4" /> },
@@ -756,9 +803,6 @@ export default function GenerateOutfitPage() {
                   disabled={isLocked}
                   size="sm"
                 />
-                <span className="text-sm text-muted-foreground">
-                  {useMannequin ? t("outfits.layoutMannequinDesc") : t("outfits.layoutFlatLayDesc")}
-                </span>
               </div>
 
               {/* Generate / New Outfit Button */}
@@ -774,7 +818,7 @@ export default function GenerateOutfitPage() {
                       setItemsDescription("");
                     }
                   }}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-foreground font-medium text-sm hover:bg-secondary/80 transition-all"
+                  className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-foreground font-medium text-sm hover:bg-secondary/80 transition-all"
                 >
                   <Plus className="w-4 h-4" />
                   {t("outfits.newOutfit")}
@@ -784,7 +828,7 @@ export default function GenerateOutfitPage() {
                   type="button"
                   onClick={handleGenerate}
                   disabled={generating || (activeTab === "fromItems" ? !hasSelection : !itemsDescription.trim())}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-40 transition-all"
+                  className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-foreground text-background font-medium text-sm hover:opacity-90 disabled:opacity-40 transition-all"
                 >
                   {generating ? (
                     <>
@@ -806,7 +850,7 @@ export default function GenerateOutfitPage() {
 
       {/* Mobile: Full-Screen Loading Overlay */}
       {generating && (
-        <div className="fixed inset-0 z-[60] lg:hidden flex items-center justify-center bg-background/98 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] xl:hidden flex items-center justify-center bg-background/98 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-6 px-8 text-center">
             {/* Animated icon container */}
             <div className="relative">
@@ -826,7 +870,7 @@ export default function GenerateOutfitPage() {
 
       {/* Mobile: Result Modal (keeps navbar visible) */}
       {!generating && generatedImage && (
-        <div className="fixed inset-0 z-40 lg:hidden overflow-hidden bg-background">
+        <div className="fixed inset-0 z-40 xl:hidden overflow-hidden bg-background">
           {/* Modal container - positioned between header and navbar */}
           <div className="absolute inset-x-3 top-[calc(3.5rem+env(safe-area-inset-top,0px)+0.75rem)] bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.75rem)] flex flex-col bg-secondary/30 rounded-2xl overflow-hidden shadow-2xl border border-foreground/[0.06]">
             {/* Close button */}
@@ -872,14 +916,23 @@ export default function GenerateOutfitPage() {
                   onChange={(e) => setOutfitName(e.target.value)}
                   className="flex-1 h-11 px-4 rounded-xl bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 text-sm"
                 />
+                <FolderDropdown
+                  folders={folders}
+                  selectedId={selectedFolderId}
+                  onSelect={setSelectedFolderId}
+                  placeholder={t("folders.selectFolder")}
+                  showClearOption={true}
+                  clearLabel={t("folders.noFolder")}
+                  compact
+                />
                 <button
                   type="button"
                   onClick={handleSave}
                   disabled={saving || !outfitName.trim()}
-                  className="h-11 px-5 flex items-center justify-center gap-2 rounded-xl bg-foreground text-background font-medium text-sm disabled:opacity-50 transition-all active:scale-[0.98]"
+                  aria-label={t("outfits.save")}
+                  className="w-11 h-11 flex items-center justify-center rounded-xl bg-foreground text-background disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {t("outfits.save")}
                 </button>
                 <button
                   type="button"
