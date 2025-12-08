@@ -10,7 +10,6 @@ Catalog your clothes, organize by categories, generate outfit compositions, and 
 
 - **Categories**: Organize items under 6 root types (Headwear, Top, Bottom, Full Body, Footwear, Accessories)
 - **Items Gallery**: Upload photos, assign categories, mark favorites, filter and paginate
-- **Dark/Light Mode**: Theme switching with next-themes
 
 ### AI Generation (Pro)
 
