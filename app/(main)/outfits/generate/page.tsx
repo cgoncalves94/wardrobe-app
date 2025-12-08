@@ -142,7 +142,7 @@ export default function GenerateOutfitPage() {
       const [itemsResult, foldersResult] = await Promise.all([
         supabase
           .from("items")
-          .select("id, name, image_url, category_id, categories(name, root)")
+          .select("id, user_id, name, image_url, category_id, is_favorite, categories(name, root)")
           .eq("user_id", user?.id)
           .order("created_at", { ascending: false }),
         supabase
@@ -152,6 +152,7 @@ export default function GenerateOutfitPage() {
           .order("name"),
       ]);
 
+      // Note: Supabase types return categories as array but runtime is single object
       setItems((itemsResult.data || []) as unknown as Item[]);
       setFolders((foldersResult.data || []) as OutfitFolder[]);
       setLoading(false);

@@ -21,8 +21,9 @@ async function getOutfitsByType(userId: string, type: "outfit" | "tryon") {
     .eq("type", type)
     .order("created_at", { ascending: false });
 
-  // If folder join fails (table doesn't exist), fetch without it
-  if (error) {
+  // If folder join fails due to missing table (42P01), fetch without it
+  // This handles the migration period when outfit_folders table may not exist
+  if (error && error.code === "42P01") {
     const fallback = await supabase
       .from("outfits")
       .select("*")
@@ -38,6 +39,12 @@ async function getOutfitsByType(userId: string, type: "outfit" | "tryon") {
       ...outfit,
       folder_name: null,
     }));
+  }
+
+  // Handle other errors
+  if (error) {
+    console.error(`Error fetching ${type}s:`, error);
+    return [];
   }
 
   // Map folder name to outfit for display
