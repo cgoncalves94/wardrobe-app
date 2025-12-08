@@ -232,7 +232,8 @@
       "failedToSave": "Failed to save try-on",
       "regenerate": "Try Again",
       "clickGenerate": "Click Generate to see yourself in this outfit",
-      "selectItemsToStart": "Upload your photo and select items to get started"
+      "selectItemsToStart": "Upload your photo and select items to get started",
+      "outfitSelected": "1 OUTFIT"
     }
   },
   "categories": {

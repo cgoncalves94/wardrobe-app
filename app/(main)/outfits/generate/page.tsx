@@ -12,6 +12,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useItemsByCategory } from "@/hooks/use-items-by-category";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ItemRow from "@/components/ItemRow";
+import SelectionStrip from "@/components/SelectionStrip";
 import EmptyState from "@/components/EmptyState";
 import ToggleButtonGroup from "@/components/ToggleButtonGroup";
 import LoadingState from "@/components/LoadingState";
@@ -670,35 +671,16 @@ export default function GenerateOutfitPage() {
                 <div className="absolute inset-0 flex flex-col">
                   {/* Fixed selection strip at top - only for fromItems when items selected */}
                   {activeTab === "fromItems" && hasSelection && (
-                    <div className="flex items-center justify-between gap-3 p-3 border-b border-foreground/[0.06] bg-background/30">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex-shrink-0">
-                        {t("outfits.selected", { count: selectedCount })}
-                      </span>
-                      <div className="flex items-center gap-2 overflow-x-auto flex-1 justify-end">
-                        {allSelected.map((item) => (
-                          <div
-                            key={item.id}
-                            className="relative w-12 h-12 rounded-lg overflow-hidden ring-2 ring-foreground/20 flex-shrink-0"
-                          >
-                            <Image
-                              src={item.image_url!}
-                              alt={item.name}
-                              fill
-                              className="object-cover"
-                              sizes="48px"
-                            />
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={clearAllSelections}
-                          className="w-12 h-12 rounded-lg border border-border/40 flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
-                          aria-label={t("aria.clearSelection")}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
+                    <SelectionStrip
+                      label={t("outfits.selected", { count: selectedCount })}
+                      items={allSelected.map((item) => ({
+                        id: item.id,
+                        name: item.name,
+                        image_url: item.image_url!,
+                      }))}
+                      onClear={clearAllSelections}
+                      clearLabel={t("aria.clearSelection")}
+                    />
                   )}
                   {/* Center placeholder */}
                   <div className="flex-1 flex flex-col items-center justify-center gap-4">

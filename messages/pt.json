@@ -232,7 +232,8 @@
       "failedToSave": "Falha ao salvar prova virtual",
       "regenerate": "Tentar Novamente",
       "clickGenerate": "Clique em Gerar para se ver neste look",
-      "selectItemsToStart": "Envie sua foto e selecione peças para começar"
+      "selectItemsToStart": "Envie sua foto e selecione peças para começar",
+      "outfitSelected": "1 LOOK"
     }
   },
   "categories": {

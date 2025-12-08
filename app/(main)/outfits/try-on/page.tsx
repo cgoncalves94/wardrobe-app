@@ -14,6 +14,7 @@ import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
 import ProFeatureGate from "@/components/ProFeatureGate";
 import ImageUploader from "@/components/ImageUploader";
 import ItemRow from "@/components/ItemRow";
+import SelectionStrip from "@/components/SelectionStrip";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
@@ -431,36 +432,6 @@ export default function TryOnPage() {
                     />
                   ) : (
                   <div className="space-y-5">
-                    {/* Selection strip - shows selected items */}
-                    {selectedCount > 0 && (
-                      <div className="flex items-center gap-3 pb-3 border-b border-foreground/[0.06]">
-                        <div className="flex gap-2 flex-1 overflow-x-auto scrollbar-hide">
-                          {allSelectedItems.map((item) => (
-                            <div
-                              key={item.id}
-                              className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 ring-2 ring-foreground/20"
-                            >
-                              <Image
-                                src={item.image_url!}
-                                alt={item.name}
-                                fill
-                                className="object-cover"
-                                sizes="48px"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={clearAllSelections}
-                          className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-                          aria-label={t("aria.clearSelection")}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-
                     {headwearItems.length > 0 && (
                       <ItemRow
                         title={t("categories.roots.headwear")}
@@ -725,15 +696,43 @@ export default function TryOnPage() {
                   </button>
                 </>
               ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center">
-                    <Sparkles className="w-10 h-10 text-muted-foreground/30" />
+                <div className="absolute inset-0 flex flex-col">
+                  {/* Fixed selection strip at top - only when items/outfit selected */}
+                  {selectionMode === "items" && hasItemSelection && (
+                    <SelectionStrip
+                      label={t("outfits.selected", { count: selectedCount })}
+                      items={allSelectedItems.map((item) => ({
+                        id: item.id,
+                        name: item.name,
+                        image_url: item.image_url!,
+                      }))}
+                      onClear={clearAllSelections}
+                      clearLabel={t("aria.clearSelection")}
+                    />
+                  )}
+                  {selectionMode === "outfits" && selectedOutfit && (
+                    <SelectionStrip
+                      label={t("outfits.tryOn.outfitSelected")}
+                      items={[{
+                        id: selectedOutfit.id,
+                        name: selectedOutfit.name,
+                        image_url: selectedOutfit.generated_image_url,
+                      }]}
+                      onClear={() => setSelectedOutfit(null)}
+                      clearLabel={t("aria.clearSelection")}
+                    />
+                  )}
+                  {/* Center placeholder */}
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-foreground/5 border border-border/30 flex items-center justify-center">
+                      <Sparkles className="w-10 h-10 text-muted-foreground/30" />
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center px-4">
+                      {canGenerate
+                        ? t("outfits.tryOn.clickGenerate")
+                        : t("outfits.tryOn.selectItemsToStart")}
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground text-center px-4">
-                    {canGenerate
-                      ? t("outfits.tryOn.clickGenerate")
-                      : t("outfits.tryOn.selectItemsToStart")}
-                  </p>
                 </div>
               )}
 
