@@ -5,6 +5,7 @@
     "loading": "Carregando...",
     "saving": "Salvando...",
     "delete": "Excluir",
+    "rename": "Renomear",
     "close": "Fechar",
     "all": "Todos",
     "favorites": "Favoritos",
@@ -18,7 +19,9 @@
     "showFavorites": "Mostrar apenas favoritos",
     "showingFavorites": "Mostrando favoritos (clique para ver todos)",
     "previous": "Anterior",
-    "next": "Próximo"
+    "next": "Próximo",
+    "cancel": "Cancelar",
+    "save": "Salvar"
   },
   "nav": {
     "home": "Início",
@@ -95,6 +98,9 @@
     "noFavoriteItems": "Nenhuma peça favorita ainda. Marque algumas para vê-las aqui!",
     "failedToUpdateFavorite": "Falha ao atualizar favorito",
     "deleteConfirm": "Excluir \"{name}\"?",
+    "itemUpdated": "Peça atualizada!",
+    "failedToUpdate": "Falha ao atualizar peça",
+    "selectCategory": "Selecionar categoria",
     "filterByCategory": "Filtrar por categoria",
     "noCategoriesYet": "Nenhuma categoria ainda",
     "createCategoriesFirst": "Crie categorias primeiro para organizar suas peças"
@@ -118,8 +124,12 @@
     "noTryOnsDescription": "Crie sua primeira prova virtual e ela aparecerá aqui",
     "createFirstTryOn": "Crie Sua Primeira Prova Virtual",
     "noFavoriteTryOns": "Nenhuma prova virtual favorita ainda. Marque algumas para vê-las aqui!",
+    "noOutfitsInFolder": "Nenhum look nesta pasta ainda.",
+    "noTryOnsInFolder": "Nenhuma prova virtual nesta pasta ainda.",
     "outfitDeleted": "Look excluído",
+    "outfitUpdated": "Look atualizado!",
     "failedToDelete": "Falha ao excluir look",
+    "failedToUpdate": "Falha ao atualizar look",
     "failedToUpdateFavorite": "Falha ao atualizar favorito",
     "deleteConfirm": "Excluir \"{name}\"?",
     "loadingWardrobe": "Carregando seu guarda-roupa...",
@@ -232,7 +242,8 @@
       "failedToSave": "Falha ao salvar prova virtual",
       "regenerate": "Tentar Novamente",
       "clickGenerate": "Clique em Gerar para se ver neste look",
-      "selectItemsToStart": "Envie sua foto e selecione peças para começar"
+      "selectItemsToStart": "Envie sua foto e selecione peças para começar",
+      "outfitSelected": "1 LOOK"
     }
   },
   "categories": {
@@ -259,12 +270,31 @@
       "accessories": "Acessórios"
     }
   },
+  "folders": {
+    "allFolders": "Todas as Pastas",
+    "newFolder": "Nova Pasta",
+    "addFolder": "Adicionar Pasta",
+    "folderAdded": "Pasta adicionada!",
+    "failedToAdd": "Falha ao adicionar pasta",
+    "namePlaceholder": "Nome da pasta...",
+    "selectFolder": "Selecionar pasta",
+    "noFolder": "Sem pasta",
+    "noFoldersYet": "Nenhuma pasta ainda",
+    "deleteConfirm": "Excluir \"{name}\"?",
+    "folderRenamed": "Pasta renomeada!",
+    "folderDeleted": "Pasta excluída!",
+    "failedToRename": "Falha ao renomear pasta",
+    "failedToDelete": "Falha ao excluir pasta",
+    "cannotDelete": "Não é possível excluir: pasta contém looks"
+  },
   "aria": {
     "closeDialog": "Fechar",
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
     "deleteItem": "Excluir peça",
+    "editItem": "Editar peça",
     "deleteOutfit": "Excluir look",
+    "editOutfit": "Editar look",
     "deleteCategory": "Excluir {name}",
     "addToFavorites": "Adicionar aos favoritos",
     "removeFromFavorites": "Remover dos favoritos",

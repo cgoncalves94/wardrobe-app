@@ -25,6 +25,14 @@ CREATE TABLE IF NOT EXISTS items (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Outfit folders table (for organizing outfits)
+CREATE TABLE IF NOT EXISTS outfit_folders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- Outfits table (AI-generated outfit compositions and virtual try-ons)
 CREATE TABLE IF NOT EXISTS outfits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -33,6 +41,7 @@ CREATE TABLE IF NOT EXISTS outfits (
   generated_image_url TEXT NOT NULL,
   is_favorite BOOLEAN DEFAULT false,
   type TEXT DEFAULT 'outfit' CHECK (type IN ('outfit', 'tryon')),
+  folder_id UUID REFERENCES outfit_folders(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -42,6 +51,7 @@ CREATE TABLE IF NOT EXISTS outfits (
 
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE outfit_folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE outfits ENABLE ROW LEVEL SECURITY;
 
 -- Categories policies
@@ -70,6 +80,10 @@ CREATE POLICY "Users can update own items" ON items
 CREATE POLICY "Users can delete own items" ON items
   FOR DELETE USING (auth.uid() = user_id OR user_id IS NULL);
 
+-- Outfit folders policies
+CREATE POLICY "Users can manage own folders" ON outfit_folders
+  FOR ALL USING (auth.uid() = user_id);
+
 -- Outfits policies
 CREATE POLICY "Users can view own outfits" ON outfits
   FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
@@ -91,8 +105,10 @@ CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
 CREATE INDEX IF NOT EXISTS idx_categories_root ON categories(root);
 CREATE INDEX IF NOT EXISTS idx_items_user_id ON items(user_id);
 CREATE INDEX IF NOT EXISTS idx_items_category_id ON items(category_id);
+CREATE INDEX IF NOT EXISTS idx_outfit_folders_user_id ON outfit_folders(user_id);
 CREATE INDEX IF NOT EXISTS idx_outfits_user_id ON outfits(user_id);
 CREATE INDEX IF NOT EXISTS idx_outfits_type ON outfits(type);
+CREATE INDEX IF NOT EXISTS idx_outfits_folder_id ON outfits(folder_id);
 
 -- ============================================
 -- 4. STORAGE BUCKET & POLICIES

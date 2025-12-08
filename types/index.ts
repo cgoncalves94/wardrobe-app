@@ -28,6 +28,14 @@ export interface Outfit {
   generated_image_url: string;
   is_favorite: boolean;
   created_at: string;
+  folder_id: string | null;
+}
+
+export interface OutfitFolder {
+  id: string;
+  user_id: string | null;
+  name: string;
+  created_at: string;
 }
 
 // Database row types (from Supabase queries)

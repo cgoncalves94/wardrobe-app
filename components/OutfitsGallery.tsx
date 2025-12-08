@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Sparkles, Star, Trash2, X, Wand2, Shirt, ChevronLeft, ChevronRight, Pencil, Check, Loader2, Folder } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
+import { useLightboxEdit } from "@/hooks/use-lightbox-edit";
+import FolderDropdown from "@/components/FolderDropdown";
+import LightboxEditForm from "@/components/LightboxEditForm";
+import type { OutfitFolder } from "@/types";
 
 /** Responsive page sizes: 6 for 1-col mobile, 12 for 2-4 col desktop (3 rows of 4) */
 const OUTFITS_PER_PAGE_MOBILE = 6;
@@ -21,6 +25,8 @@ export type Outfit = {
   generated_image_url?: string | null;
   is_favorite?: boolean;
   created_at: string;
+  folder_id?: string | null;
+  folder_name?: string | null;
 };
 
 type TabType = "outfits" | "tryons";
@@ -28,33 +34,50 @@ type TabType = "outfits" | "tryons";
 type Props = {
   outfits: Outfit[];
   tryons?: Outfit[];
+  folders?: OutfitFolder[];
 };
 
 /**
  * Tabbed gallery for generated outfits and try-ons with favorites and lightbox
  */
-export default function OutfitsGallery({ outfits: initialOutfits, tryons: initialTryons = [] }: Props) {
+export default function OutfitsGallery({ outfits: initialOutfits, tryons: initialTryons = [], folders: initialFolders = [] }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
 
   const [outfits, setOutfits] = useState<Outfit[]>(initialOutfits);
   const [tryons, setTryons] = useState<Outfit[]>(initialTryons);
+  const [folders, setFolders] = useState<OutfitFolder[]>(initialFolders);
   const [activeTab, setActiveTab] = useState<TabType>(tabParam === "tryons" ? "tryons" : "outfits");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const outfitsPerPage = useResponsivePageSize(OUTFITS_PER_PAGE_MOBILE, OUTFITS_PER_PAGE_DESKTOP);
   const [currentPage, setCurrentPage] = useState(0);
   const [open, setOpen] = useState(false);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Edit mode state (shared hook)
+  const [editState, editActions] = useLightboxEdit<string | null>(null);
+
+  // New folder inline form state
+  const [addingFolder, setAddingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [submittingFolder, setSubmittingFolder] = useState(false);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const userIdRef = useRef<string | null>(null);
+
   const activeList = activeTab === "outfits" ? outfits : tryons;
 
   const filteredItems = useMemo(() => {
-    if (showFavoritesOnly) {
-      return activeList.filter((o) => o.is_favorite);
+    let filtered = activeList;
+    if (selectedFolderId) {
+      filtered = filtered.filter((o) => o.folder_id === selectedFolderId);
     }
-    return activeList;
-  }, [activeList, showFavoritesOnly]);
+    if (showFavoritesOnly) {
+      filtered = filtered.filter((o) => o.is_favorite);
+    }
+    return filtered;
+  }, [activeList, selectedFolderId, showFavoritesOnly]);
 
   // Paginated items for current page
   const paginatedItems = useMemo(() => {
@@ -73,13 +96,32 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setOpen(false);
-        setSelectedOutfit(null);
+        if (editState.editing) {
+          editActions.cancelEditing();
+        } else {
+          setOpen(false);
+          setSelectedOutfit(null);
+        }
       }
     }
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
+  }, [open, editState.editing, editActions]);
+
+  // Auto-focus folder input when adding
+  useEffect(() => {
+    if (addingFolder && folderInputRef.current) {
+      folderInputRef.current.focus();
+    }
+  }, [addingFolder]);
+
+  // Get user ID on mount for folder creation
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      userIdRef.current = user?.id || null;
+    })();
+  }, [supabase]);
 
   // Reset page if it becomes out of bounds after resize
   useEffect(() => {
@@ -175,6 +217,148 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
     }
   }
 
+  async function handleSaveEdit() {
+    if (!selectedOutfit || !editState.editName.trim()) return;
+
+    editActions.setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("outfits")
+        .update({
+          name: editState.editName.trim(),
+          folder_id: editState.editRelationId,
+        })
+        .eq("id", selectedOutfit.id);
+
+      if (error) throw error;
+
+      // Find the new folder name
+      const newFolder = folders.find((f) => f.id === editState.editRelationId);
+
+      // Update local state
+      const updatedOutfit = {
+        ...selectedOutfit,
+        name: editState.editName.trim(),
+        folder_id: editState.editRelationId,
+        folder_name: newFolder?.name || null,
+      };
+
+      const updateList = (prev: Outfit[]) =>
+        prev.map((o) => (o.id === selectedOutfit.id ? updatedOutfit : o));
+
+      if (activeTab === "outfits") {
+        setOutfits(updateList);
+      } else {
+        setTryons(updateList);
+      }
+      setSelectedOutfit(updatedOutfit);
+      editActions.cancelEditing();
+      toast.success(t("outfits.outfitUpdated"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("outfits.failedToUpdate");
+      toast.error(message);
+    } finally {
+      editActions.setSaving(false);
+    }
+  }
+
+  // Folder functions
+  function cancelAddingFolder() {
+    setAddingFolder(false);
+    setNewFolderName("");
+  }
+
+  async function submitAddFolder() {
+    if (!newFolderName.trim()) return;
+    if (!userIdRef.current) {
+      toast.error(t("auth.mustBeLoggedIn", { action: t("folders.addFolder").toLowerCase() }));
+      return;
+    }
+
+    setSubmittingFolder(true);
+    try {
+      const { data, error } = await supabase
+        .from("outfit_folders")
+        .insert({
+          name: newFolderName.trim(),
+          user_id: userIdRef.current,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFolders((prev) => [...prev, data as OutfitFolder]);
+      toast.success(t("folders.folderAdded"));
+      setNewFolderName("");
+      setAddingFolder(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("folders.failedToAdd");
+      toast.error(message);
+    } finally {
+      setSubmittingFolder(false);
+    }
+  }
+
+  async function handleRenameFolder(id: string, newName: string) {
+    try {
+      const { error } = await supabase
+        .from("outfit_folders")
+        .update({ name: newName })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setFolders((prev) =>
+        prev.map((f) => (f.id === id ? { ...f, name: newName } : f))
+      );
+
+      // Also update folder_name on outfits and tryons that use this folder
+      setOutfits((prev) =>
+        prev.map((o) => (o.folder_id === id ? { ...o, folder_name: newName } : o))
+      );
+      setTryons((prev) =>
+        prev.map((o) => (o.folder_id === id ? { ...o, folder_name: newName } : o))
+      );
+
+      toast.success(t("folders.folderRenamed"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("folders.failedToRename");
+      toast.error(message);
+    }
+  }
+
+  async function handleDeleteFolder(id: string) {
+    // Check if any outfits or tryons use this folder
+    const hasOutfits = outfits.some((o) => o.folder_id === id);
+    const hasTryons = tryons.some((o) => o.folder_id === id);
+
+    if (hasOutfits || hasTryons) {
+      toast.error(t("folders.cannotDelete"));
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("outfit_folders")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setFolders((prev) => prev.filter((f) => f.id !== id));
+
+      // Clear filter if we deleted the selected folder
+      if (selectedFolderId === id) {
+        setSelectedFolderId(null);
+      }
+      toast.success(t("folders.folderDeleted"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("folders.failedToDelete");
+      toast.error(message);
+    }
+  }
+
   if (outfits.length === 0 && tryons.length === 0) {
     return (
       <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
@@ -266,7 +450,63 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
             </button>
           </>
         )}
+
+        {/* Folder filter */}
+        <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
+        <FolderDropdown
+          folders={folders}
+          selectedId={selectedFolderId}
+          onSelect={(id) => {
+            setSelectedFolderId(id);
+            setCurrentPage(0);
+          }}
+          compact
+          showNewFolder
+          onNewFolder={() => setAddingFolder(true)}
+          onRename={handleRenameFolder}
+          onDelete={handleDeleteFolder}
+        />
       </div>
+
+      {/* New Folder inline form - full width row */}
+      {addingFolder && (
+        <div className="flex items-center gap-2">
+          <input
+            ref={folderInputRef}
+            type="text"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitAddFolder();
+              if (e.key === "Escape") cancelAddingFolder();
+            }}
+            placeholder={t("folders.namePlaceholder")}
+            className="flex-1 h-9 px-3 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={submittingFolder}
+          />
+          <button
+            type="button"
+            onClick={submitAddFolder}
+            disabled={!newFolderName.trim() || submittingFolder}
+            className="p-2 rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-50 transition-all"
+            aria-label={t("folders.addFolder")}
+          >
+            {submittingFolder ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Check className="w-4 h-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={cancelAddingFolder}
+            className="p-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={t("common.cancel")}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {activeList.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
@@ -292,7 +532,7 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
         </div>
       ) : filteredItems.length > 0 ? (
         <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {paginatedItems.map((outfit) => (
           <button
             key={outfit.id}
@@ -323,15 +563,24 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
                 </div>
               )}
             </div>
-            <div className="p-4">
-              <h3 className="font-medium truncate">{outfit.name}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                {format.dateTime(new Date(outfit.created_at), {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
+            <div className="p-2.5 sm:p-4">
+              <h3 className="font-medium text-sm sm:text-base truncate">{outfit.name}</h3>
+              <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 flex-wrap">
+                {outfit.folder_name && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-[10px] sm:text-xs text-muted-foreground">
+                    <Folder className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    {outfit.folder_name}
+                  </span>
+                )}
+                <span className="text-[10px] sm:text-xs text-muted-foreground">
+                  {outfit.folder_name && "• "}
+                  {format.dateTime(new Date(outfit.created_at), {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
             </div>
           </button>
         ))}
@@ -367,10 +616,20 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
       ) : (
         <div className="rounded-xl border-2 border-dashed border-border py-16 text-center">
           <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-secondary flex items-center justify-center">
-            <Star className="w-7 h-7 text-muted-foreground" />
+            {selectedFolderId && !showFavoritesOnly ? (
+              <Folder className="w-7 h-7 text-muted-foreground" />
+            ) : (
+              <Star className="w-7 h-7 text-muted-foreground" />
+            )}
           </div>
           <p className="text-muted-foreground">
-            {activeTab === "outfits" ? t('outfits.noFavoriteOutfits') : t('outfits.noFavoriteTryOns')}
+            {selectedFolderId && !showFavoritesOnly
+              ? activeTab === "outfits"
+                ? t("outfits.noOutfitsInFolder")
+                : t("outfits.noTryOnsInFolder")
+              : activeTab === "outfits"
+                ? t("outfits.noFavoriteOutfits")
+                : t("outfits.noFavoriteTryOns")}
           </p>
         </div>
       )}
@@ -412,56 +671,109 @@ export default function OutfitsGallery({ outfits: initialOutfits, tryons: initia
               />
             )}
 
-            <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-4 rounded-xl bg-white/10 backdrop-blur-md p-4">
-              <div className="min-w-0">
-                <h3 className="font-medium text-white truncate">
-                  {selectedOutfit.name}
-                </h3>
-                <p className="text-sm text-white/60">
-                  {format.dateTime(new Date(selectedOutfit.created_at), {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(selectedOutfit);
-                  }}
-                  className={`p-2.5 rounded-lg transition-colors ${
-                    selectedOutfit.is_favorite
-                      ? "bg-white/20 text-white"
-                      : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                  }`}
-                  aria-label={
-                    selectedOutfit.is_favorite
-                      ? t('aria.removeFromFavorites')
-                      : t('aria.addToFavorites')
+            <div className="sticky bottom-0 mt-4 rounded-xl bg-white/10 backdrop-blur-md p-4 overflow-visible">
+              {editState.editing ? (
+                <LightboxEditForm
+                  name={editState.editName}
+                  onNameChange={editActions.setEditName}
+                  namePlaceholder={t("outfits.nameOutfitPlaceholder")}
+                  dropdown={
+                    folders.length > 0 ? (
+                      <FolderDropdown
+                        folders={folders}
+                        selectedId={editState.editRelationId}
+                        onSelect={editActions.setEditRelationId}
+                        placeholder={t("folders.selectFolder")}
+                        variant="lightbox"
+                        showClearOption={true}
+                        clearLabel={t("folders.noFolder")}
+                      />
+                    ) : (
+                      <span className="text-sm text-white/50 flex items-center gap-2">
+                        <Folder className="w-4 h-4" />
+                        {t("folders.noFoldersYet")}
+                      </span>
+                    )
                   }
-                >
-                  <Star
-                    className={`w-5 h-5 ${
-                      selectedOutfit.is_favorite ? "fill-current" : ""
-                    }`}
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(selectedOutfit);
-                  }}
-                  disabled={deleting}
-                  className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
-                  aria-label={t('aria.deleteOutfit')}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
+                  onSave={handleSaveEdit}
+                  onCancel={editActions.cancelEditing}
+                  saving={editState.saving}
+                  saveDisabled={!editState.editName.trim()}
+                />
+              ) : (
+                /* View mode */
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-white truncate">
+                      {selectedOutfit.name}
+                    </h3>
+                    <p className="text-sm text-white/60">
+                      {selectedOutfit.folder_name && (
+                        <span className="inline-flex items-center gap-1">
+                          <Folder className="w-3 h-3" />
+                          {selectedOutfit.folder_name}
+                        </span>
+                      )}
+                      <span className="hidden sm:inline">
+                        {selectedOutfit.folder_name && <span className="mx-1">•</span>}
+                        {format.dateTime(new Date(selectedOutfit.created_at), {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        editActions.startEditing(selectedOutfit.name, selectedOutfit.folder_id || null);
+                      }}
+                      className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                      aria-label={t("aria.editOutfit")}
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(selectedOutfit);
+                      }}
+                      className={`p-2.5 rounded-lg transition-colors ${
+                        selectedOutfit.is_favorite
+                          ? "bg-white/20 text-white"
+                          : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                      }`}
+                      aria-label={
+                        selectedOutfit.is_favorite
+                          ? t('aria.removeFromFavorites')
+                          : t('aria.addToFavorites')
+                      }
+                    >
+                      <Star
+                        className={`w-5 h-5 ${
+                          selectedOutfit.is_favorite ? "fill-current" : ""
+                        }`}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(selectedOutfit);
+                      }}
+                      disabled={deleting}
+                      className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+                      aria-label={t('aria.deleteOutfit')}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

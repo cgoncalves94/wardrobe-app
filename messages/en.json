@@ -5,6 +5,7 @@
     "loading": "Loading...",
     "saving": "Saving...",
     "delete": "Delete",
+    "rename": "Rename",
     "close": "Close",
     "all": "All",
     "favorites": "Favorites",
@@ -18,7 +19,9 @@
     "showFavorites": "Show favorites only",
     "showingFavorites": "Showing favorites (click to show all)",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save"
   },
   "nav": {
     "home": "Home",
@@ -95,6 +98,9 @@
     "noFavoriteItems": "No favorite items yet. Star some items to see them here!",
     "failedToUpdateFavorite": "Failed to update favorite",
     "deleteConfirm": "Delete \"{name}\"?",
+    "itemUpdated": "Item updated!",
+    "failedToUpdate": "Failed to update item",
+    "selectCategory": "Select category",
     "filterByCategory": "Filter by category",
     "noCategoriesYet": "No categories yet",
     "createCategoriesFirst": "Create categories first to organize your items"
@@ -118,8 +124,12 @@
     "noTryOnsDescription": "Create your first virtual try-on and it will appear here",
     "createFirstTryOn": "Create Your First Try-On",
     "noFavoriteTryOns": "No favorite try-ons yet. Star some to see them here!",
+    "noOutfitsInFolder": "No outfits in this folder yet.",
+    "noTryOnsInFolder": "No try-ons in this folder yet.",
     "outfitDeleted": "Outfit deleted",
+    "outfitUpdated": "Outfit updated!",
     "failedToDelete": "Failed to delete outfit",
+    "failedToUpdate": "Failed to update outfit",
     "failedToUpdateFavorite": "Failed to update favorite",
     "deleteConfirm": "Delete \"{name}\"?",
     "loadingWardrobe": "Loading your wardrobe...",
@@ -232,7 +242,8 @@
       "failedToSave": "Failed to save try-on",
       "regenerate": "Try Again",
       "clickGenerate": "Click Generate to see yourself in this outfit",
-      "selectItemsToStart": "Upload your photo and select items to get started"
+      "selectItemsToStart": "Upload your photo and select items to get started",
+      "outfitSelected": "1 OUTFIT"
     }
   },
   "categories": {
@@ -259,12 +270,31 @@
       "accessories": "Accessories"
     }
   },
+  "folders": {
+    "allFolders": "All Folders",
+    "newFolder": "New Folder",
+    "addFolder": "Add Folder",
+    "folderAdded": "Folder added!",
+    "failedToAdd": "Failed to add folder",
+    "namePlaceholder": "Folder name...",
+    "selectFolder": "Select folder",
+    "noFolder": "No folder",
+    "noFoldersYet": "No folders yet",
+    "deleteConfirm": "Delete \"{name}\"?",
+    "folderRenamed": "Folder renamed!",
+    "folderDeleted": "Folder deleted!",
+    "failedToRename": "Failed to rename folder",
+    "failedToDelete": "Failed to delete folder",
+    "cannotDelete": "Cannot delete: folder contains outfits"
+  },
   "aria": {
     "closeDialog": "Close",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "deleteItem": "Delete item",
+    "editItem": "Edit item",
     "deleteOutfit": "Delete outfit",
+    "editOutfit": "Edit outfit",
     "deleteCategory": "Delete {name}",
     "addToFavorites": "Add to favorites",
     "removeFromFavorites": "Remove from favorites",

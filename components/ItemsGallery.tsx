@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useFormatter } from "next-intl";
-import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Star, Trash2, Wand2, X, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/sonner";
 import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
+import { useLightboxEdit } from "@/hooks/use-lightbox-edit";
 import CategoryDropdown from "@/components/CategoryDropdown";
+import LightboxEditForm from "@/components/LightboxEditForm";
 import type { CategoryRoot } from "@/lib/categories";
 
 /** Responsive page sizes: 6 for 1-col mobile, 12 for 2-4 col desktop */
@@ -56,6 +58,9 @@ export default function ItemsGallery({
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Edit mode state (shared hook)
+  const [editState, editActions] = useLightboxEdit<string | null>(null);
+
   const supabase = createClient();
   const t = useTranslations();
   const format = useFormatter();
@@ -63,13 +68,17 @@ export default function ItemsGallery({
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
-        setOpen(false);
-        setSelectedItem(null);
+        if (editState.editing) {
+          editActions.cancelEditing();
+        } else {
+          setOpen(false);
+          setSelectedItem(null);
+        }
       }
     }
     if (open) document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
+  }, [open, editState.editing, editActions]);
 
   const setCategory = (id: string | null) => {
     if (onSelectCategory) onSelectCategory(id);
@@ -177,6 +186,46 @@ export default function ItemsGallery({
     }
   }
 
+  async function handleSaveEdit() {
+    if (!selectedItem || !editState.editName.trim()) return;
+
+    editActions.setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("items")
+        .update({
+          name: editState.editName.trim(),
+          category_id: editState.editRelationId,
+        })
+        .eq("id", selectedItem.id);
+
+      if (error) throw error;
+
+      // Find the new category name
+      const newCategory = categories.find((c) => c.id === editState.editRelationId);
+
+      // Update local state
+      const updatedItem = {
+        ...selectedItem,
+        name: editState.editName.trim(),
+        category_id: editState.editRelationId,
+        category_name: newCategory?.name || null,
+      };
+
+      setItems((prev) =>
+        prev.map((i) => (i.id === selectedItem.id ? updatedItem : i))
+      );
+      setSelectedItem(updatedItem);
+      editActions.cancelEditing();
+      toast.success(t("items.itemUpdated"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("items.failedToUpdate");
+      toast.error(message);
+    } finally {
+      editActions.setSaving(false);
+    }
+  }
+
   return (
     <div className="space-y-6 pb-4">
       {/* Header */}
@@ -254,7 +303,7 @@ export default function ItemsGallery({
       {/* Grid */}
       {filteredItems.length > 0 ? (
         <>
-        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
           {paginatedItems.map((it, index) => (
             <li
               key={it.id}
@@ -289,20 +338,22 @@ export default function ItemsGallery({
                   </div>
                 )}
               </button>
-              <div className="p-4 space-y-1">
-                <div className="font-medium">{it.name}</div>
-                <div className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-secondary text-muted-foreground">
-                  {it.category_name || t('common.uncategorized')}
+              <div className="p-2.5 sm:p-4 space-y-1">
+                <div className="font-medium text-sm sm:text-base truncate">{it.name}</div>
+                <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
+                  <span className="px-1.5 sm:px-2 py-0.5 rounded bg-secondary">
+                    {it.category_name || t('common.uncategorized')}
+                  </span>
+                  {it.created_at && (
+                    <span>
+                      • {format.dateTime(new Date(it.created_at), {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
                 </div>
-                {it.created_at && (
-                  <div className="text-xs text-muted-foreground">
-                    {t('common.added')} {format.dateTime(new Date(it.created_at), {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </div>
-                )}
               </div>
             </li>
           ))}
@@ -363,7 +414,7 @@ export default function ItemsGallery({
       {/* Lightbox */}
       {open && selectedItem && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm overflow-y-auto"
           onClick={() => {
             setOpen(false);
             setSelectedItem(null);
@@ -372,7 +423,7 @@ export default function ItemsGallery({
           aria-modal="true"
         >
           <div
-            className="relative max-h-[90vh] w-full max-w-3xl"
+            className="relative flex flex-col items-center w-full max-w-3xl my-auto overflow-visible"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close button */}
@@ -388,76 +439,116 @@ export default function ItemsGallery({
               <X className="w-6 h-6" />
             </button>
 
-            {/* Image */}
-            {selectedItem.image_url ? (
-              <Image
-                src={selectedItem.image_url}
-                alt={selectedItem.name}
-                width={1600}
-                height={1600}
-                className="h-auto w-full rounded-xl object-contain"
-                sizes="(max-width: 1024px) 100vw, 1024px"
-              />
-            ) : (
-              <div className="aspect-square w-full rounded-xl bg-secondary flex items-center justify-center text-muted-foreground">
-                {t('common.noImage')}
-              </div>
-            )}
-
-            {/* Info bar */}
-            <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-white/10 backdrop-blur-md p-4">
-              <div className="min-w-0">
-                <h3 className="font-medium text-white truncate">
-                  {selectedItem.name}
-                </h3>
-                <p className="text-sm text-white/60">
-                  {selectedItem.category_name || t('common.uncategorized')}
-                  {selectedItem.created_at && (
-                    <> &bull; {t('common.added')} {format.dateTime(new Date(selectedItem.created_at), {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}</>
-                  )}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(selectedItem);
-                  }}
-                  className={`p-2.5 rounded-lg transition-colors ${
-                    selectedItem.is_favorite
-                      ? "bg-white/20 text-white"
-                      : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
-                  }`}
-                  aria-label={
-                    selectedItem.is_favorite
-                      ? t('aria.removeFromFavorites')
-                      : t('aria.addToFavorites')
-                  }
-                >
-                  <Star
-                    className={`w-5 h-5 ${
-                      selectedItem.is_favorite ? "fill-current" : ""
-                    }`}
+            {/* Fixed-size content wrapper for consistent lightbox dimensions */}
+            <div className="flex flex-col w-[90vw] sm:w-[500px] md:w-[600px] max-w-full">
+              {/* Image container with fixed aspect ratio */}
+              <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-black/20">
+                {selectedItem.image_url ? (
+                  <Image
+                    src={selectedItem.image_url}
+                    alt={selectedItem.name}
+                    fill
+                    sizes="(max-width: 640px) 90vw, 600px"
+                    className="object-contain"
                   />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(selectedItem);
-                  }}
-                  disabled={deleting}
-                  className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
-                  aria-label={t('aria.deleteItem')}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+                    {t('common.noImage')}
+                  </div>
+                )}
               </div>
+
+              {/* Info bar */}
+              <div className="mt-4 w-full rounded-xl bg-white/10 backdrop-blur-md p-4 overflow-visible">
+              {editState.editing ? (
+                <LightboxEditForm
+                  name={editState.editName}
+                  onNameChange={editActions.setEditName}
+                  namePlaceholder={t("items.namePlaceholder")}
+                  dropdown={
+                    <CategoryDropdown
+                      categories={categories}
+                      selectedId={editState.editRelationId}
+                      onSelect={editActions.setEditRelationId}
+                      placeholder={t("items.categoryPlaceholder")}
+                      variant="lightbox"
+                      showClearOption={false}
+                    />
+                  }
+                  onSave={handleSaveEdit}
+                  onCancel={editActions.cancelEditing}
+                  saving={editState.saving}
+                  saveDisabled={!editState.editName.trim()}
+                />
+              ) : (
+                /* View mode */
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-white truncate">
+                      {selectedItem.name}
+                    </h3>
+                    <p className="text-sm text-white/60">
+                      {selectedItem.category_name || t("common.uncategorized")}
+                      {selectedItem.created_at && (
+                        <> • {format.dateTime(new Date(selectedItem.created_at), {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        editActions.startEditing(selectedItem.name, selectedItem.category_id || null);
+                      }}
+                      className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                      aria-label={t("aria.editItem")}
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(selectedItem);
+                      }}
+                      className={`p-2.5 rounded-lg transition-colors ${
+                        selectedItem.is_favorite
+                          ? "bg-white/20 text-white"
+                          : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+                      }`}
+                      aria-label={
+                        selectedItem.is_favorite
+                          ? t("aria.removeFromFavorites")
+                          : t("aria.addToFavorites")
+                      }
+                    >
+                      <Star
+                        className={`w-5 h-5 ${
+                          selectedItem.is_favorite ? "fill-current" : ""
+                        }`}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(selectedItem);
+                      }}
+                      disabled={deleting}
+                      className="p-2.5 rounded-lg bg-white/10 text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+                      aria-label={t("aria.deleteItem")}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             </div>
           </div>
         </div>

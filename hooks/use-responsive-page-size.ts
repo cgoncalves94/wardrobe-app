@@ -22,20 +22,16 @@ export function useResponsivePageSize(
   desktopSize: number,
   breakpoint = 640
 ): number {
-  // SSR-safe lazy initializer to avoid hydration mismatch
-  const [pageSize, setPageSize] = useState(() => {
-    if (typeof window === "undefined") {
-      return desktopSize; // SSR default
-    }
-    return window.innerWidth >= breakpoint ? desktopSize : mobileSize;
-  });
+  // Always start with desktopSize to match SSR and avoid hydration mismatch
+  const [pageSize, setPageSize] = useState(desktopSize);
 
   useEffect(() => {
     function updatePageSize() {
       const isDesktop = window.innerWidth >= breakpoint;
       setPageSize(isDesktop ? desktopSize : mobileSize);
     }
-    // Only add resize listener (initial value set by lazy initializer)
+    // Set correct value on mount, then listen for resize
+    updatePageSize();
     window.addEventListener("resize", updatePageSize);
     return () => window.removeEventListener("resize", updatePageSize);
   }, [mobileSize, desktopSize, breakpoint]);
