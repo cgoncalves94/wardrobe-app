@@ -306,6 +306,20 @@ export default function TryOnPage() {
       }
 
       setGeneratedImage(data.imageUrl);
+
+      // Move used selfie to front (most recently used) - only after successful generation
+      const usedSelfie = selfies.find((s) => s.image_url === userPhotoUrl);
+      if (usedSelfie) {
+        const reordered = [usedSelfie, ...selfies.filter((s) => s.id !== usedSelfie.id)];
+        setSelfies(reordered);
+
+        // Update database - await to ensure it persists before user leaves
+        await supabase
+          .from("user_selfies")
+          .update({ last_used_at: new Date().toISOString() })
+          .eq("id", usedSelfie.id);
+      }
+
       toast.success(t("outfits.tryOn.tryOnGenerated"));
     } catch (error) {
       const message = error instanceof Error ? error.message : t("outfits.tryOn.failedToGenerate");
@@ -902,7 +916,7 @@ export default function TryOnPage() {
                 alt={t("outfits.tryOn.title")}
                 fill
                 className="object-cover"
-                sizes="100vw"
+                sizes="calc(100vw - 1.5rem)"
               />
               {/* Fullscreen button */}
               <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-sm text-white text-xs font-medium">

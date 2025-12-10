@@ -158,12 +158,14 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
       const publicUrl = urlData.publicUrl;
 
       // Save to database with file_path for reliable deletion later
+      // Set last_used_at to now so it appears first in the list
       const { data: newSelfie, error: dbError } = await supabase
         .from("user_selfies")
         .insert({
           user_id: userId,
           image_url: publicUrl,
           file_path: filePath,
+          last_used_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -220,16 +222,9 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
     }
   };
 
-  const updateLastUsed = async (selfieId: string) => {
-    await supabase
-      .from("user_selfies")
-      .update({ last_used_at: new Date().toISOString() })
-      .eq("id", selfieId);
-  };
-
   const handleSelect = (selfie: UserSelfie) => {
     onSelect(selfie.image_url);
-    updateLastUsed(selfie.id);
+    // Don't reorder here - only reorder after actual generation (in parent)
   };
 
   // Staging UI
@@ -301,7 +296,7 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
       {/* Selfie strip */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {/* Saved selfies */}
-        {selfies.map((selfie) => {
+        {selfies.map((selfie, index) => {
           const isSelected = selectedUrl === selfie.image_url;
           const isDeleting = deletingId === selfie.id;
 
@@ -324,6 +319,7 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
                   fill
                   className="object-cover"
                   sizes="96px"
+                  priority={index === 0}
                 />
                 {isSelected && (
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
