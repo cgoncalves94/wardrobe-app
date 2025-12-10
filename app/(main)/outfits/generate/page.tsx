@@ -604,6 +604,7 @@ export default function GenerateOutfitPage() {
                     }}
                     icon={getRootIcon("Top")}
                     disabled={isLocked}
+                    priorityFirstItem
                   />
 
                   {outerwearItems.length > 0 && (

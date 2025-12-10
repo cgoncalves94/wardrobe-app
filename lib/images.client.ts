@@ -49,7 +49,7 @@ export async function compressImageClient(base64: string): Promise<string> {
       }
     };
     img.onerror = () => reject(new Error("Failed to load image for compression"));
-    img.src = `data:image/jpeg;base64,${base64}`;
+    img.src = `data:;base64,${base64}`;
   });
 }
 

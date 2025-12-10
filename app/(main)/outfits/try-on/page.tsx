@@ -44,8 +44,8 @@ import { isProRoute } from "@/lib/features";
 
 type SelectionMode = "items" | "outfits";
 
-/** Responsive page sizes: 8 for 2-col mobile (2x4), 12 for 3-col desktop (3x4) */
-const OUTFITS_PER_PAGE_MOBILE = 8;
+/** Responsive page sizes: 10 for 2-col mobile (2x5), 12 for 3-col desktop (3x4) */
+const OUTFITS_PER_PAGE_MOBILE = 10;
 const OUTFITS_PER_PAGE_DESKTOP = 12;
 
 /**
