@@ -21,6 +21,8 @@ interface ItemRowProps<T extends BaseItem> {
   selectedMulti?: T[];
   onMultiSelect?: (items: T[]) => void;
   disabled?: boolean;
+  /** Mark first item as priority for LCP - only use on first visible row */
+  priorityFirstItem?: boolean;
 }
 
 /**
@@ -36,6 +38,7 @@ export default function ItemRow<T extends BaseItem>({
   selectedMulti = [],
   onMultiSelect,
   disabled = false,
+  priorityFirstItem = false,
 }: ItemRowProps<T>) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -118,7 +121,7 @@ export default function ItemRow<T extends BaseItem>({
                 type="button"
                 onClick={() => handleSelect(item)}
                 disabled={disabled}
-                className={`relative flex-shrink-0 w-[76px] h-[76px] sm:w-[88px] sm:h-[88px] lg:w-24 lg:h-24 rounded-xl overflow-hidden snap-start transition-all duration-200 ${
+                className={`relative flex-shrink-0 w-[84px] h-[84px] sm:w-[98px] sm:h-[98px] lg:w-[112px] lg:h-[112px] rounded-xl overflow-hidden snap-start transition-all duration-200 ${
                   disabled
                     ? "opacity-50"
                     : isSelected
@@ -131,8 +134,8 @@ export default function ItemRow<T extends BaseItem>({
                   alt={item.name}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 640px) 76px, (max-width: 1024px) 88px, 96px"
-                  priority={index === 0}
+                  sizes="(max-width: 640px) 84px, (max-width: 1024px) 98px, 112px"
+                  priority={priorityFirstItem && index === 0}
                 />
                 {isSelected && (
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center">

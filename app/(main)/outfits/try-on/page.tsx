@@ -18,7 +18,7 @@ import SelectionStrip from "@/components/SelectionStrip";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
-import { urlToBase64 } from "@/lib/images.client";
+import { urlToBase64, compressImageClient } from "@/lib/images.client";
 import type { Item, Outfit, OutfitFolder, UserSelfie } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import FolderDropdown from "@/components/FolderDropdown";
@@ -44,9 +44,9 @@ import { isProRoute } from "@/lib/features";
 
 type SelectionMode = "items" | "outfits";
 
-/** Responsive page sizes: 8 for 2-col mobile (2x4), 9 for 3-col desktop (3x3) */
-const OUTFITS_PER_PAGE_MOBILE = 8;
-const OUTFITS_PER_PAGE_DESKTOP = 9;
+/** Responsive page sizes: 10 for 2-col mobile (2x5), 12 for 3-col desktop (3x4) */
+const OUTFITS_PER_PAGE_MOBILE = 10;
+const OUTFITS_PER_PAGE_DESKTOP = 12;
 
 /**
  * Virtual try-on page component
@@ -66,6 +66,7 @@ export default function TryOnPage() {
   // Selected items (for items mode)
   const [selectedHeadwear, setSelectedHeadwear] = useState<Item | null>(null);
   const [selectedTop, setSelectedTop] = useState<Item | null>(null);
+  const [selectedOuterwear, setSelectedOuterwear] = useState<Item | null>(null);
   const [selectedBottom, setSelectedBottom] = useState<Item | null>(null);
   const [selectedFullBody, setSelectedFullBody] = useState<Item | null>(null);
   const [selectedFootwear, setSelectedFootwear] = useState<Item | null>(null);
@@ -183,6 +184,7 @@ export default function TryOnPage() {
   const {
     headwear: headwearItems,
     top: topItems,
+    outerwear: outerwearItems,
     bottom: bottomItems,
     fullBody: fullBodyItems,
     footwear: footwearItems,
@@ -193,6 +195,7 @@ export default function TryOnPage() {
   const allSelectedItems = [
     selectedHeadwear,
     selectedTop,
+    selectedOuterwear,
     selectedBottom,
     selectedFullBody,
     selectedFootwear,
@@ -215,6 +218,7 @@ export default function TryOnPage() {
   function clearAllSelections() {
     setSelectedHeadwear(null);
     setSelectedTop(null);
+    setSelectedOuterwear(null);
     setSelectedBottom(null);
     setSelectedFullBody(null);
     setSelectedFootwear(null);
@@ -257,10 +261,12 @@ export default function TryOnPage() {
     setGeneratedImage(null);
 
     try {
-      // Convert user photo to base64
+      // Convert user photo to base64 and compress client-side
+      // Compression is critical for mobile Safari which has strict memory limits
       let userPhotoBase64: string;
       try {
-        userPhotoBase64 = await urlToBase64(userPhotoUrl);
+        const rawBase64 = await urlToBase64(userPhotoUrl);
+        userPhotoBase64 = await compressImageClient(rawBase64);
       } catch (urlError) {
         console.error("Failed to convert selfie to base64:", urlError, "URL:", userPhotoUrl);
         throw new Error(t("outfits.tryOn.failedToLoadPhoto"));
@@ -513,7 +519,19 @@ export default function TryOnPage() {
                       }}
                       icon={getRootIcon("Top")}
                       disabled={isLocked}
+                      priorityFirstItem
                     />
+
+                    {outerwearItems.length > 0 && (
+                      <ItemRow
+                        title={t("categories.roots.outerwear")}
+                        items={outerwearItems}
+                        selected={selectedOuterwear}
+                        onSelect={setSelectedOuterwear}
+                        icon={getRootIcon("Outerwear")}
+                        disabled={isLocked}
+                      />
+                    )}
 
                     <ItemRow
                       title={t("categories.roots.bottom")}

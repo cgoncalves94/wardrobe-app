@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generateTryOnImage } from "@/lib/gemini";
 import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
-import { fetchImageAsBase64, compressImageBase64 } from "@/lib/images";
+import { fetchImageAsBase64 } from "@/lib/images";
 
 /**
  * Generate virtual try-on image via Gemini AI
@@ -69,9 +69,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Compress user photo for AI processing (reduces IMAGE_OTHER errors from large images)
-    const compressedUserPhoto = await compressImageBase64(userPhotoBase64);
 
     // Build clothing items with categories for items mode
     let clothingItems: { base64: string; category: string }[] | undefined;
@@ -148,7 +145,7 @@ export async function POST(request: NextRequest) {
 
     const result = await generateTryOnImage({
       mode: effectiveMode,
-      userPhotoBase64: compressedUserPhoto,
+      userPhotoBase64: userPhotoBase64,
       clothingItems,
       outfitImageBase64,
     });

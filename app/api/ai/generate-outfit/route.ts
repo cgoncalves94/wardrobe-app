@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { headwearItemId, topItemId, bottomItemId, fullBodyItemId, footwearItemId, accessoryIds, itemsDescription, style, useMannequin, mannequinGender } = body;
+    const { headwearItemId, topItemId, outerwearItemId, bottomItemId, fullBodyItemId, footwearItemId, accessoryIds, itemsDescription, style, useMannequin, mannequinGender } = body;
 
     let result: { imageBase64: string; prompt: string };
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         mannequinGender: mannequinGender as MannequinGender,
       });
     } else {
-      const itemIds = [headwearItemId, topItemId, bottomItemId, fullBodyItemId, footwearItemId, ...(accessoryIds || [])].filter(Boolean);
+      const itemIds = [headwearItemId, topItemId, outerwearItemId, bottomItemId, fullBodyItemId, footwearItemId, ...(accessoryIds || [])].filter(Boolean);
 
       if (itemIds.length === 0) {
         return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
       result = await generateOutfitImage({
         headwearImageBase64: headwearItemId ? imageMap[headwearItemId] : undefined,
         topImageBase64: topItemId ? imageMap[topItemId] : undefined,
+        outerwearImageBase64: outerwearItemId ? imageMap[outerwearItemId] : undefined,
         bottomImageBase64: bottomItemId ? imageMap[bottomItemId] : undefined,
         fullBodyImageBase64: fullBodyItemId ? imageMap[fullBodyItemId] : undefined,
         footwearImageBase64: footwearItemId ? imageMap[footwearItemId] : undefined,
