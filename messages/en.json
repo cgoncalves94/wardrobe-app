@@ -273,6 +273,7 @@
     "roots": {
       "headwear": "Headwear",
       "top": "Top",
+      "outerwear": "Outerwear",
       "bottom": "Bottom",
       "fullBody": "Full Body",
       "footwear": "Footwear",

@@ -5,11 +5,12 @@ import {
   Footprints,
   Watch,
   HardHat,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 
 /** Category root types matching database values */
-export type CategoryRoot = "Headwear" | "Top" | "Bottom" | "Full Body" | "Footwear" | "Accessories";
+export type CategoryRoot = "Headwear" | "Top" | "Bottom" | "Full Body" | "Footwear" | "Accessories" | "Outerwear";
 
 /** Configuration for a category root with translation key and icon */
 export interface RootConfig {
@@ -27,6 +28,7 @@ export interface RootConfig {
 export const ROOT_CONFIG: RootConfig[] = [
   { key: "headwear", dbValue: "Headwear", icon: HardHat, promptDescription: "headwear/hat" },
   { key: "top", dbValue: "Top", icon: Shirt, promptDescription: "top/shirt" },
+  { key: "outerwear", dbValue: "Outerwear", icon: Layers, promptDescription: "outerwear/jacket/coat layer" },
   { key: "bottom", dbValue: "Bottom", icon: RectangleVertical, promptDescription: "bottom/pants/skirt" },
   { key: "fullBody", dbValue: "Full Body", icon: PersonStanding, promptDescription: "full-body garment (dress/jumpsuit/romper)" },
   { key: "footwear", dbValue: "Footwear", icon: Footprints, promptDescription: "footwear/shoes" },

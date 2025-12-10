@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  root TEXT CHECK (root IN ('Headwear', 'Top', 'Bottom', 'Full Body', 'Footwear', 'Accessories')),
+  root TEXT CHECK (root IN ('Headwear', 'Top', 'Outerwear', 'Bottom', 'Full Body', 'Footwear', 'Accessories')),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

@@ -60,6 +60,7 @@ export type { OutfitStyle, MannequinGender } from "./types";
 interface GenerateOutfitOptions {
   headwearImageBase64?: string;
   topImageBase64?: string;
+  outerwearImageBase64?: string;
   bottomImageBase64?: string;
   fullBodyImageBase64?: string;
   footwearImageBase64?: string;
@@ -73,7 +74,7 @@ type TryOnMode = "items" | "outfits";
 /** Clothing item with its category for smarter prompts */
 interface ClothingItem {
   base64: string;
-  category: string; // e.g., "Headwear", "Top", "Bottom", "Full Body", "Footwear", "Accessories"
+  category: string; // e.g., "Headwear", "Top", "Outerwear", "Bottom", "Full Body", "Footwear", "Accessories"
 }
 
 /** Options for virtual try-on generation */
@@ -93,7 +94,7 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   imageBase64: string;
   prompt: string;
 }> {
-  const { headwearImageBase64, topImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, useMannequin = false, mannequinGender = "female" } = options;
+  const { headwearImageBase64, topImageBase64, outerwearImageBase64, bottomImageBase64, fullBodyImageBase64, footwearImageBase64, accessoryImagesBase64, useMannequin = false, mannequinGender = "female" } = options;
 
   // Build the content parts - images first, then prompt (per Google best practices)
   const parts: any[] = [];
@@ -101,6 +102,7 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
 
   const hasFullBody = Boolean(fullBodyImageBase64);
   const hasTop = Boolean(topImageBase64);
+  const hasOuterwear = Boolean(outerwearImageBase64);
   const hasBottom = Boolean(bottomImageBase64);
 
   if (headwearImageBase64) {
@@ -109,6 +111,10 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   }
   if (topImageBase64) {
     parts.push({ inlineData: { mimeType: "image/jpeg", data: topImageBase64 } });
+    itemCount++;
+  }
+  if (outerwearImageBase64) {
+    parts.push({ inlineData: { mimeType: "image/jpeg", data: outerwearImageBase64 } });
     itemCount++;
   }
   if (bottomImageBase64) {
@@ -339,7 +345,15 @@ IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. 
       }
     } else {
       const categoryDescriptions = categories.map(c => getRootPromptDescription(c));
-      replacementInstructions = `Replace ONLY the person's ${categoryDescriptions.join(" and ")} with the items shown. Keep all OTHER clothing exactly as it appears in the original photo.`;
+      const hasTop = categories.includes("Top");
+      const hasOuterwear = categories.includes("Outerwear");
+
+      // If selecting a Top but no Outerwear, remove any existing jacket so the new top is fully visible
+      const removeOuterwearNote = hasTop && !hasOuterwear
+        ? " IMPORTANT: Remove any jacket, coat, or outerwear layer the person is wearing - the new top should be fully visible without any outer layer covering it."
+        : "";
+
+      replacementInstructions = `Replace ONLY the person's ${categoryDescriptions.join(" and ")} with the items shown. Keep all OTHER clothing exactly as it appears in the original photo.${removeOuterwearNote}`;
     }
 
     prompt = `${replacementInstructions} Keep the person's face, hair, pose, and background exactly the same.

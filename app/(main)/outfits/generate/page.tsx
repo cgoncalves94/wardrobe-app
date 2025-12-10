@@ -84,6 +84,7 @@ export default function GenerateOutfitPage() {
   // Selected items (for "From Items" tab)
   const [selectedHeadwear, setSelectedHeadwear] = useState<Item | null>(null);
   const [selectedTop, setSelectedTop] = useState<Item | null>(null);
+  const [selectedOuterwear, setSelectedOuterwear] = useState<Item | null>(null);
   const [selectedBottom, setSelectedBottom] = useState<Item | null>(null);
   const [selectedFullBody, setSelectedFullBody] = useState<Item | null>(null);
   const [selectedFootwear, setSelectedFootwear] = useState<Item | null>(null);
@@ -164,6 +165,7 @@ export default function GenerateOutfitPage() {
   const {
     headwear: headwearItems,
     top: topItems,
+    outerwear: outerwearItems,
     bottom: bottomItems,
     fullBody: fullBodyItems,
     footwear: footwearItems,
@@ -174,6 +176,7 @@ export default function GenerateOutfitPage() {
   const allSelected = [
     selectedHeadwear,
     selectedTop,
+    selectedOuterwear,
     selectedBottom,
     selectedFullBody,
     selectedFootwear,
@@ -287,6 +290,7 @@ export default function GenerateOutfitPage() {
           ? {
               headwearItemId: selectedHeadwear?.id,
               topItemId: selectedTop?.id,
+              outerwearItemId: selectedOuterwear?.id,
               bottomItemId: selectedBottom?.id,
               fullBodyItemId: selectedFullBody?.id,
               footwearItemId: selectedFootwear?.id,
@@ -368,6 +372,7 @@ export default function GenerateOutfitPage() {
   function clearAllSelections() {
     setSelectedHeadwear(null);
     setSelectedTop(null);
+    setSelectedOuterwear(null);
     setSelectedBottom(null);
     setSelectedFullBody(null);
     setSelectedFootwear(null);
@@ -600,6 +605,17 @@ export default function GenerateOutfitPage() {
                     icon={getRootIcon("Top")}
                     disabled={isLocked}
                   />
+
+                  {outerwearItems.length > 0 && (
+                    <ItemRow
+                      title={t("categories.roots.outerwear")}
+                      items={outerwearItems}
+                      selected={selectedOuterwear}
+                      onSelect={setSelectedOuterwear}
+                      icon={getRootIcon("Outerwear")}
+                      disabled={isLocked}
+                    />
+                  )}
 
                   <ItemRow
                     title={t("categories.roots.bottom")}
