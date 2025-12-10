@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -70,6 +70,15 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+
+  // Cleanup: revoke object URL on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (staged?.previewUrl) {
+        URL.revokeObjectURL(staged.previewUrl);
+      }
+    };
+  }, [staged?.previewUrl]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,12 +157,13 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
       const { data: urlData } = supabase.storage.from("wardrobe").getPublicUrl(filePath);
       const publicUrl = urlData.publicUrl;
 
-      // Save to database
+      // Save to database with file_path for reliable deletion later
       const { data: newSelfie, error: dbError } = await supabase
         .from("user_selfies")
         .insert({
           user_id: userId,
           image_url: publicUrl,
+          file_path: filePath,
         })
         .select()
         .single();
@@ -199,10 +209,9 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
         onSelect(updatedSelfies[0]?.image_url || null);
       }
 
-      // Optionally delete from storage (extract path from URL)
-      const urlParts = selfie.image_url.split("/wardrobe/");
-      if (urlParts[1]) {
-        await supabase.storage.from("wardrobe").remove([urlParts[1]]);
+      // Delete from storage using stored file_path (robust, not URL-dependent)
+      if (selfie.file_path) {
+        await supabase.storage.from("wardrobe").remove([selfie.file_path]);
       }
     } catch (err) {
       console.error("Delete failed:", err);

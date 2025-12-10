@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS user_selfies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   image_url TEXT NOT NULL,
+  file_path TEXT NOT NULL,
   last_used_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now()
 );
