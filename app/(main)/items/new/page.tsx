@@ -21,6 +21,7 @@ export default function NewItemPage() {
   const [categories, setCategories] = useState<{ id: string; name: string; root: CategoryRoot }[]>([]);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [hasStaged, setHasStaged] = useState(false);
   const supabase = createClient();
   const router = useRouter();
   const t = useTranslations();
@@ -128,6 +129,7 @@ export default function NewItemPage() {
               folder="items"
               onUploaded={(_, url) => setImageUrl(url)}
               imageUrl={imageUrl}
+              onStagedChange={setHasStaged}
             />
           </div>
 
@@ -135,7 +137,7 @@ export default function NewItemPage() {
           <button
             type="button"
             onClick={save}
-            disabled={!name || !categoryId || saving}
+            disabled={!name || !categoryId || saving || hasStaged}
             className="w-full h-11 flex items-center justify-center gap-2 rounded-lg bg-foreground text-background font-medium hover:opacity-90 disabled:opacity-50 transition-all"
           >
             {saving ? (

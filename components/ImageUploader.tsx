@@ -13,6 +13,8 @@ type Props = {
   imageUrl?: string;
   /** Show full image without cropping (useful for full-body photos) */
   preserveAspect?: boolean;
+  /** Called when staged state changes (true = has pending image to confirm) */
+  onStagedChange?: (hasStaged: boolean) => void;
 };
 
 type StagedImage = {
@@ -69,7 +71,7 @@ async function rotateImageToBlob(file: File, degrees: number): Promise<string> {
 /**
  * Drag-and-drop image uploader with rotation support and Supabase storage integration
  */
-export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, preserveAspect = false }: Props) {
+export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, preserveAspect = false, onStagedChange }: Props) {
   const t = useTranslations("common");
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -91,6 +93,7 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, pr
       previewUrl: URL.createObjectURL(file),
       rotation: 0,
     });
+    onStagedChange?.(true);
   }
 
   // Rotate staged image - actually rotates the preview
@@ -132,10 +135,11 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, pr
       URL.revokeObjectURL(staged.previewUrl);
     }
     setStaged(null);
+    onStagedChange?.(false);
     if (inputRef.current) {
       inputRef.current.value = "";
     }
-  }, [staged]);
+  }, [staged, onStagedChange]);
 
   // Upload the staged image (with rotation already applied in preview)
   async function confirmUpload() {
@@ -164,6 +168,7 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, pr
       // Clean up and reset
       URL.revokeObjectURL(staged.previewUrl);
       setStaged(null);
+      onStagedChange?.(false);
       onUploaded(filePath, data.publicUrl);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Upload failed";
