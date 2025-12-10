@@ -21,7 +21,11 @@
     "previous": "Anterior",
     "next": "Próximo",
     "cancel": "Cancelar",
-    "save": "Salvar"
+    "save": "Salvar",
+    "confirm": "Confirmar",
+    "rotateLeft": "Girar à esquerda",
+    "rotateRight": "Girar à direita",
+    "uploading": "Enviando..."
   },
   "nav": {
     "home": "Início",
