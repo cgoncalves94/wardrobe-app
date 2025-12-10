@@ -21,6 +21,51 @@ type StagedImage = {
   rotation: number; // 0, 90, 180, 270
 };
 
+// Canvas-based image rotation - pure utility function (moved outside component for performance)
+async function rotateImageToBlob(file: File, degrees: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl); // Clean up temp URL after image loads
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not get canvas context"));
+        return;
+      }
+
+      // Swap dimensions for 90/270 degree rotations
+      const swap = degrees === 90 || degrees === 270;
+      canvas.width = swap ? img.height : img.width;
+      canvas.height = swap ? img.width : img.height;
+
+      // Move to center, rotate, draw, move back
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((degrees * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(URL.createObjectURL(blob));
+          } else {
+            reject(new Error("Failed to create rotated image"));
+          }
+        },
+        file.type || "image/jpeg",
+        0.92
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl); // Clean up on error too
+      reject(new Error("Failed to load image"));
+    };
+    img.src = objectUrl;
+  });
+}
+
 /**
  * Drag-and-drop image uploader with rotation support and Supabase storage integration
  */
@@ -33,45 +78,6 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, pr
   const [rotating, setRotating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
-
-  // Canvas-based image rotation - returns a blob URL
-  async function rotateImageToBlob(file: File, degrees: number): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          reject(new Error("Could not get canvas context"));
-          return;
-        }
-
-        // Swap dimensions for 90/270 degree rotations
-        const swap = degrees === 90 || degrees === 270;
-        canvas.width = swap ? img.height : img.width;
-        canvas.height = swap ? img.width : img.height;
-
-        // Move to center, rotate, draw, move back
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((degrees * Math.PI) / 180);
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              resolve(URL.createObjectURL(blob));
-            } else {
-              reject(new Error("Failed to create rotated image"));
-            }
-          },
-          file.type || "image/jpeg",
-          0.92
-        );
-      };
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = URL.createObjectURL(file);
-    });
-  }
 
   // Stage image for preview (no upload yet)
   function stageFile(file: File) {
@@ -92,26 +98,29 @@ export default function ImageUploader({ bucket, folder, onUploaded, imageUrl, pr
     if (!staged || rotating) return;
 
     setRotating(true);
+    setError(null);
     try {
       const newRotation = direction === "left"
         ? (staged.rotation - 90 + 360) % 360
         : (staged.rotation + 90) % 360;
 
-      // Clean up old preview
-      URL.revokeObjectURL(staged.previewUrl);
-
-      // Create new rotated preview from original file
+      // Create new rotated preview FIRST (before revoking old one)
+      // This ensures if rotation fails, we don't leave UI in broken state
       const newPreviewUrl = newRotation === 0
         ? URL.createObjectURL(staged.originalFile)
         : await rotateImageToBlob(staged.originalFile, newRotation);
 
+      // Only revoke old URL after successfully creating new one
+      const oldPreviewUrl = staged.previewUrl;
       setStaged({
         ...staged,
         previewUrl: newPreviewUrl,
         rotation: newRotation,
       });
+      URL.revokeObjectURL(oldPreviewUrl);
     } catch (err) {
       console.error("Rotation failed:", err);
+      setError(err instanceof Error ? err.message : "Rotation failed");
     } finally {
       setRotating(false);
     }
