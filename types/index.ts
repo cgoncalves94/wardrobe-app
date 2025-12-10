@@ -38,6 +38,15 @@ export interface OutfitFolder {
   created_at: string;
 }
 
+export interface UserSelfie {
+  id: string;
+  user_id: string;
+  image_url: string;
+  file_path: string;  // Storage path for reliable deletion
+  last_used_at: string;
+  created_at: string;
+}
+
 // Database row types (from Supabase queries)
 export interface ItemRow {
   id: string;

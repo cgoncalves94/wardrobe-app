@@ -304,7 +304,17 @@ export default function GenerateOutfitPage() {
         body: JSON.stringify(body),
       });
 
-      const data = await response.json();
+      // Defensive JSON parsing - Safari throws "string did not match expected pattern"
+      // when trying to parse non-JSON responses (like HTML error pages)
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Unexpected response type:", contentType, "Body:", text.slice(0, 200));
+        throw new Error(t("outfits.failedToGenerate"));
+      }
 
       if (!response.ok) {
         throw new Error(data.error || t("outfits.failedToGenerate"));

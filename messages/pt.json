@@ -240,6 +240,7 @@
       "generating": "Criando seu look...",
       "tryOnGenerated": "Prova virtual gerada!",
       "failedToGenerate": "Falha ao gerar prova virtual",
+      "failedToLoadPhoto": "Falha ao carregar sua foto. Por favor, tente selecioná-la novamente.",
       "namePlaceholder": "Dê um nome a este look...",
       "tryOnSaved": "Prova virtual salva!",
       "tryOnDeleted": "Prova virtual excluída",
@@ -247,7 +248,11 @@
       "regenerate": "Tentar Novamente",
       "clickGenerate": "Clique em Gerar para se ver neste look",
       "selectItemsToStart": "Envie sua foto e selecione peças para começar",
-      "outfitSelected": "1 LOOK"
+      "outfitSelected": "1 LOOK",
+      "savedPhoto": "Foto salva",
+      "addPhotoHint": "Adicione uma foto para usar nas provas",
+      "yourSavedPhotos": "Suas Fotos",
+      "uploadNewPhoto": "Enviar nova"
     }
   },
   "categories": {

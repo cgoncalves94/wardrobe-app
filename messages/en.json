@@ -240,6 +240,7 @@
       "generating": "Creating your look...",
       "tryOnGenerated": "Try-on generated!",
       "failedToGenerate": "Failed to generate try-on",
+      "failedToLoadPhoto": "Failed to load your photo. Please try selecting it again.",
       "namePlaceholder": "Name this look...",
       "tryOnSaved": "Try-on saved!",
       "tryOnDeleted": "Try-on deleted",
@@ -247,7 +248,11 @@
       "regenerate": "Try Again",
       "clickGenerate": "Click Generate to see yourself in this outfit",
       "selectItemsToStart": "Upload your photo and select items to get started",
-      "outfitSelected": "1 OUTFIT"
+      "outfitSelected": "1 OUTFIT",
+      "savedPhoto": "Saved photo",
+      "addPhotoHint": "Add a photo to use for try-ons",
+      "yourSavedPhotos": "Your Photos",
+      "uploadNewPhoto": "Upload new"
     }
   },
   "categories": {

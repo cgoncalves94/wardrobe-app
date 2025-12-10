@@ -12,14 +12,14 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useItemsByCategory } from "@/hooks/use-items-by-category";
 import { useResponsivePageSize } from "@/hooks/use-responsive-page-size";
 import ProFeatureGate from "@/components/ProFeatureGate";
-import ImageUploader from "@/components/ImageUploader";
+import SelfiePicker from "@/components/SelfiePicker";
 import ItemRow from "@/components/ItemRow";
 import SelectionStrip from "@/components/SelectionStrip";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/LoadingState";
 import ImageLightbox from "@/components/ImageLightbox";
 import { urlToBase64 } from "@/lib/images.client";
-import type { Item, Outfit, OutfitFolder } from "@/types";
+import type { Item, Outfit, OutfitFolder, UserSelfie } from "@/types";
 import { toast } from "@/components/ui/sonner";
 import FolderDropdown from "@/components/FolderDropdown";
 import {
@@ -59,7 +59,8 @@ export default function TryOnPage() {
   // Selection mode (tabs)
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("items");
 
-  // User photo state
+  // User photo state (saved selfies)
+  const [selfies, setSelfies] = useState<UserSelfie[]>([]);
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
 
   // Selected items (for items mode)
@@ -136,8 +137,8 @@ export default function TryOnPage() {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id || null);
 
-      // Load items, outfits, and folders in parallel
-      const [itemsResult, outfitsResult, foldersResult] = await Promise.all([
+      // Load items, outfits, folders, and selfies in parallel
+      const [itemsResult, outfitsResult, foldersResult, selfiesResult] = await Promise.all([
         supabase
           .from("items")
           .select("id, name, image_url, category_id, categories(name, root)")
@@ -154,11 +155,25 @@ export default function TryOnPage() {
           .select("*")
           .eq("user_id", user?.id)
           .order("name"),
+        supabase
+          .from("user_selfies")
+          .select("*")
+          .eq("user_id", user?.id)
+          .order("last_used_at", { ascending: false })
+          .limit(5),
       ]);
 
       setItems((itemsResult.data || []) as unknown as Item[]);
       setOutfits((outfitsResult.data || []) as Outfit[]);
       setFolders((foldersResult.data || []) as OutfitFolder[]);
+
+      // Set selfies and auto-select the most recent one
+      const loadedSelfies = (selfiesResult.data || []) as UserSelfie[];
+      setSelfies(loadedSelfies);
+      if (loadedSelfies.length > 0) {
+        setUserPhotoUrl(loadedSelfies[0].image_url);
+      }
+
       setLoading(false);
     }
     loadData();
@@ -243,7 +258,13 @@ export default function TryOnPage() {
 
     try {
       // Convert user photo to base64
-      const userPhotoBase64 = await urlToBase64(userPhotoUrl);
+      let userPhotoBase64: string;
+      try {
+        userPhotoBase64 = await urlToBase64(userPhotoUrl);
+      } catch (urlError) {
+        console.error("Failed to convert selfie to base64:", urlError, "URL:", userPhotoUrl);
+        throw new Error(t("outfits.tryOn.failedToLoadPhoto"));
+      }
 
       // Build request body based on selection mode
       const requestBody: {
@@ -268,7 +289,17 @@ export default function TryOnPage() {
         body: JSON.stringify(requestBody),
       });
 
-      const data = await response.json();
+      // Defensive JSON parsing - Safari throws "string did not match expected pattern"
+      // when trying to parse non-JSON responses (like HTML error pages)
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Unexpected response type:", contentType, "Body:", text.slice(0, 200));
+        throw new Error(t("outfits.tryOn.failedToGenerate"));
+      }
 
       if (!response.ok) {
         throw new Error(data.error || t("outfits.tryOn.failedToGenerate"));
@@ -365,24 +396,26 @@ export default function TryOnPage() {
         {/* Left Column: Selection Panel */}
         <div className={generating || generatedImage ? "hidden xl:block" : ""}>
           <div className="space-y-4">
-            {/* Step 1: Upload Photo */}
+            {/* Step 1: Your Photo */}
             <div className="p-5 rounded-2xl bg-secondary/30 border border-foreground/[0.04]">
               <div className="flex items-center gap-2.5 mb-3">
                 <Camera className="w-4 h-4 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {t("outfits.tryOn.step1")}: {t("outfits.tryOn.uploadPhoto")}
+                  {t("outfits.tryOn.step1")}: {t("outfits.tryOn.yourSavedPhotos")}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mb-3">
                 {t("outfits.tryOn.uploadPhotoDesc")}
               </p>
-              <ImageUploader
-                bucket="wardrobe"
-                folder="tryons"
-                onUploaded={(_, publicUrl) => setUserPhotoUrl(publicUrl)}
-                imageUrl={userPhotoUrl || undefined}
-                preserveAspect
-              />
+              {userId && (
+                <SelfiePicker
+                  selfies={selfies}
+                  selectedUrl={userPhotoUrl}
+                  onSelect={setUserPhotoUrl}
+                  onSelfiesChange={setSelfies}
+                  userId={userId}
+                />
+              )}
             </div>
 
             {/* Step 2: Select Outfit */}

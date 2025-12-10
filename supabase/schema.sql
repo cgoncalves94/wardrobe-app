@@ -122,7 +122,24 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'wardrobe');
 
--- 7. SUBSCRIPTIONS
+-- 7. USER SELFIES (for virtual try-on)
+CREATE TABLE IF NOT EXISTS user_selfies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  last_used_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE user_selfies ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own selfies" ON user_selfies
+  FOR ALL USING ((SELECT auth.uid()) = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_user_selfies_user_last_used ON user_selfies(user_id, last_used_at DESC);
+
+-- 8. SUBSCRIPTIONS
 CREATE TYPE subscription_tier AS ENUM ('free','pro');
 
 CREATE TABLE IF NOT EXISTS user_subscriptions (
