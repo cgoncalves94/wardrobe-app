@@ -31,13 +31,16 @@ export async function compressImageBase64(
   const height = metadata.height || 0;
   const needsResize = width > maxDimension || height > maxDimension;
   const needsSizeReduction = inputBuffer.length > SIZE_THRESHOLD_BYTES;
+  const hasExifOrientation = metadata.orientation && metadata.orientation !== 1;
 
-  // Skip compression if image is already small enough
-  if (!needsResize && !needsSizeReduction) {
+  // ALWAYS normalize EXIF orientation for AI processing (fixes mobile photo rotation issues)
+  // Skip other processing if image is already small enough and properly oriented
+  if (!needsResize && !needsSizeReduction && !hasExifOrientation) {
     return base64;
   }
 
   const compressed = await sharp(inputBuffer)
+    .rotate() // Auto-orient based on EXIF - bakes rotation into pixels & strips EXIF tag
     .resize(maxDimension, maxDimension, {
       fit: "inside",
       withoutEnlargement: true,

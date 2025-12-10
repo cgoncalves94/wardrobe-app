@@ -299,7 +299,7 @@ export async function generateTryOnImage(options: TryOnOptions): Promise<{
 
 Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
 
-IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output the image at the same resolution, aspect ratio, and ORIENTATION as the person's photo. Do not crop, resize, rotate, or change the framing. The output must have the same up/down orientation as the input - if the person is standing upright in the photo, they must be standing upright in the result.`;
+IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
 
     parts.push({ text: prompt });
 
@@ -346,7 +346,7 @@ IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. 
 
 Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
 
-IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output the image at the same resolution, aspect ratio, and ORIENTATION as the person's photo. Do not crop, resize, rotate, or change the framing. The output must have the same up/down orientation as the input - if the person is standing upright in the photo, they must be standing upright in the result.`;
+IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
 
     parts.push({ text: prompt });
 
