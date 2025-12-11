@@ -62,6 +62,7 @@ export default function TryOnPage() {
   // User photo state (saved selfies)
   const [selfies, setSelfies] = useState<UserSelfie[]>([]);
   const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
+  const [hasPendingPhoto, setHasPendingPhoto] = useState(false);
 
   // Selected items (for items mode)
   const [selectedHeadwear, setSelectedHeadwear] = useState<Item | null>(null);
@@ -208,8 +209,8 @@ export default function TryOnPage() {
   // Lock controls when generating or showing results
   const isLocked = !!generatedImage || generating;
 
-  // Can generate if we have a photo AND either items selected OR an outfit selected
-  const canGenerate = userPhotoUrl && (
+  // Can generate if we have a confirmed photo (not pending) AND either items selected OR an outfit selected
+  const canGenerate = userPhotoUrl && !hasPendingPhoto && (
     (selectionMode === "items" && hasItemSelection) ||
     (selectionMode === "outfits" && selectedOutfit)
   );
@@ -434,6 +435,7 @@ export default function TryOnPage() {
                   onSelect={setUserPhotoUrl}
                   onSelfiesChange={setSelfies}
                   userId={userId}
+                  onPendingChange={setHasPendingPhoto}
                 />
               )}
             </div>

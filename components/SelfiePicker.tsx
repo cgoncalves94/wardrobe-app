@@ -21,6 +21,8 @@ type Props = {
   onSelect: (url: string | null) => void;
   onSelfiesChange: (selfies: UserSelfie[]) => void;
   userId: string;
+  /** Called when a photo is pending confirmation (staged but not yet uploaded) */
+  onPendingChange?: (pending: boolean) => void;
 };
 
 async function rotateImageToBlob(file: File, degrees: number): Promise<Blob> {
@@ -62,7 +64,7 @@ async function rotateImageToBlob(file: File, degrees: number): Promise<Blob> {
   });
 }
 
-export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfiesChange, userId }: Props) {
+export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfiesChange, userId, onPendingChange }: Props) {
   const t = useTranslations("outfits.tryOn");
   const [staged, setStaged] = useState<StagedImage | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -79,6 +81,11 @@ export default function SelfiePicker({ selfies, selectedUrl, onSelect, onSelfies
       }
     };
   }, [staged?.previewUrl]);
+
+  // Notify parent when a photo is pending confirmation
+  useEffect(() => {
+    onPendingChange?.(staged !== null);
+  }, [staged, onPendingChange]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
