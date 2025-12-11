@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Wardrobe",
@@ -21,6 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {children}
           </ThemeProvider>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );
