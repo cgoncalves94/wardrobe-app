@@ -174,7 +174,7 @@ export async function generateOutfitImage(options: GenerateOutfitOptions): Promi
   })();
 
   const prompt = useMannequin
-    ? `Create an image: A vertical 3:4 portrait fashion photograph shot with an 85mm lens. A ${mannequinGender} headless gray mannequin stands centered against a clean white studio backdrop, wearing these exact ${itemCount} garments from the reference images above. Capture full body from shoulders to feet. Soft diffused studio lighting. Each garment must preserve its exact original appearance from the reference - maintaining identical neckline, collar style, sleeve length, colors, patterns and fabric texture. If a full-body garment is included, treat it as the primary piece; layer any provided tops or outerwear naturally. Only include the garments shown in the references, nothing additional.`
+    ? `Create an image: A vertical 3:4 portrait fashion photograph shot with an 85mm lens. A retail store display mannequin with a smooth featureless oval head - solid matte gray plastic/fiberglass form, NO human skin texture - stands centered against a clean white studio backdrop, wearing these exact ${itemCount} garments from the reference images above. The mannequin has a ${mannequinGender} body shape. Capture full body from head to feet. Soft diffused studio lighting. Each garment must preserve its exact original appearance from the reference - maintaining identical neckline, collar style, sleeve length, colors, patterns and fabric texture. If a full-body garment is included, treat it as the primary piece; layer any provided tops or outerwear naturally. Only include the garments shown in the references, nothing additional.`
 
     : `Create an image: A professional overhead flat-lay photograph shot with a 35mm lens looking straight down at a white marble surface. Soft natural window light from the left.
 
@@ -244,7 +244,7 @@ export async function generateOutfitFromPrompt(options: GenerateFromPromptOption
   // Following Google's best practices: narrative style, photographer language
   // IMPORTANT: Be restrictive - only generate what user explicitly asks for
   const prompt = useMannequin
-    ? `Create an image: A ${mannequinGender} headless gray mannequin against a white studio backdrop. Full body from shoulders to feet. Soft studio lighting.
+    ? `Create an image: A retail store display mannequin with a smooth featureless oval head - solid matte gray plastic/fiberglass form, NO human skin texture - against a white studio backdrop. The mannequin has a ${mannequinGender} body shape. Full body from head to feet. Soft studio lighting.
 
 Wearing ONLY: ${itemsDescription}. Style: ${styleDescriptions[style]}.
 
