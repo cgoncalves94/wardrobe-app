@@ -193,7 +193,7 @@ Each garment preserves its exact appearance from the reference. Every piece laid
   // Call Gemini API with retry logic for rate limits
   const response = await withRetry(() =>
     ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3-pro-image-preview",
       contents: [{ role: "user", parts }],
       config: {
         responseModalities: ["TEXT", "IMAGE"],
@@ -269,7 +269,7 @@ NO extras unless explicitly requested.`;
   // Call Gemini API with retry logic for rate limits
   const response = await withRetry(() =>
     ai.models.generateContent({
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3-pro-image-preview",
       contents: [{ role: "user", parts }],
       config: {
         responseModalities: ["TEXT", "IMAGE"],
@@ -303,18 +303,21 @@ export async function generateTryOnImage(options: TryOnOptions): Promise<{
   const parts: any[] = [];
   let prompt: string;
 
+  // Add unique prefix to bust implicit caching (Gemini caches requests with same prefix)
+  const cacheBreaker = `[Request ID: ${Date.now()}-${Math.random().toString(36).slice(2, 8)}]\n\n`;
+
   if (mode === "outfits" && outfitImageBase64) {
     // OUTFIT MODE: Replace the entire outfit
-    prompt = `Replace ALL clothing on the MAIN PERSON (the most centered/prominent person) with the complete outfit shown in the first image. The first image shows a full outfit - use it to dress the main person only. Keep their face, hair, pose, and background exactly the same. Replace everything they're wearing with this outfit.
+    // Person photo FIRST so Gemini memorizes face before seeing outfit
+    parts.push({ text: `${cacheBreaker}REFERENCE PERSON (preserve this exact identity):` });
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: userPhotoBase64,
+      },
+    });
 
-Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
-
-IMPORTANT: Focus ONLY on the main/centered person. Preserve their face, skin tone, body shape, and pose EXACTLY. REMOVE any other people from the image completely - fill their area with the background. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
-
-    parts.push({ text: prompt });
-
-    // Add outfit image
-    parts.push({ text: "COMPLETE OUTFIT TO WEAR:" });
+    parts.push({ text: "OUTFIT TO APPLY:" });
     parts.push({
       inlineData: {
         mimeType: "image/jpeg",
@@ -322,57 +325,39 @@ IMPORTANT: Focus ONLY on the main/centered person. Preserve their face, skin ton
       },
     });
 
-    // Add person photo
-    parts.push({ text: "PERSON TO DRESS:" });
+    prompt = `Virtual try-on: Extract the CLOTHING from the second image and apply it to the person in the first image.
+
+The second image shows clothes on a mannequin/model - IGNORE the mannequin's pose entirely. Only use it to see what garments to apply.
+
+PRESERVE FROM FIRST IMAGE:
+- Exact same person (face, facial features, skin tone, hair)
+- Exact same pose and body position
+- Exact same background and environment
+- Same framing and composition
+
+TAKE FROM SECOND IMAGE:
+- Only the clothing/garments (colors, patterns, style)
+- Adapt the clothes to fit the person's actual pose
+
+The clothes must naturally conform to how the person is standing/positioned in the original photo. Do not change their pose to match the mannequin.
+
+CRITICAL: If multiple people in photo, focus on main/centered person only and remove others. Same resolution and aspect ratio. No cropping or rotating.`;
+
+    parts.push({ text: prompt });
+  } else if (clothingItems?.length) {
+    // ITEMS MODE: Replace only specific clothing categories
+    // Person photo FIRST so Gemini memorizes face before seeing clothing items
+    parts.push({ text: `${cacheBreaker}REFERENCE PERSON (preserve this exact identity):` });
     parts.push({
       inlineData: {
         mimeType: "image/jpeg",
         data: userPhotoBase64,
       },
     });
-  } else if (clothingItems?.length) {
-    // ITEMS MODE: Replace only specific clothing categories
-    const categories = clothingItems.map(item => item.category);
-    const hasFullBody = categories.includes("Full Body");
-
-    // Build smart replacement instructions based on categories
-    let replacementInstructions: string;
-    if (hasFullBody) {
-      // Full body replaces top + bottom
-      const fullBodyDesc = getRootPromptDescription("Full Body");
-      const otherCategories = categories.filter(c => c !== "Full Body");
-      if (otherCategories.length > 0) {
-        const otherDescriptions = otherCategories.map(c => getRootPromptDescription(c));
-        replacementInstructions = `Replace the person's top and bottom clothing with the ${fullBodyDesc}, and also replace their ${otherDescriptions.join(" and ")}.`;
-      } else {
-        replacementInstructions = `Replace the person's top and bottom clothing with the ${fullBodyDesc}.`;
-      }
-    } else {
-      const categoryDescriptions = categories.map(c => getRootPromptDescription(c));
-      const hasTop = categories.includes("Top");
-      const hasOuterwear = categories.includes("Outerwear");
-
-      // If selecting a Top but no Outerwear, remove any existing jacket so the new top is fully visible
-      const removeOuterwearNote = hasTop && !hasOuterwear
-        ? " IMPORTANT: Remove any jacket, coat, or outerwear layer the person is wearing - the new top should be fully visible without any outer layer covering it."
-        : "";
-
-      replacementInstructions = `Replace ONLY the person's ${categoryDescriptions.join(" and ")} with the items shown. Keep all OTHER clothing exactly as it appears in the original photo.${removeOuterwearNote}`;
-    }
-
-    prompt = `Focus ONLY on the MAIN PERSON (the most centered/prominent person in the photo).
-
-${replacementInstructions} Keep the main person's face, hair, pose, and background exactly the same.
-
-Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
-
-IMPORTANT: Only edit the main/centered person. Preserve their face, skin tone, body shape, and pose EXACTLY. REMOVE any other people from the image completely - fill their area with the background. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
-
-    parts.push({ text: prompt });
 
     // Add clothing images with category labels
     for (const item of clothingItems) {
-      parts.push({ text: `${item.category.toUpperCase()} ITEM:` });
+      parts.push({ text: `${item.category.toUpperCase()} ITEM TO APPLY:` });
       parts.push({
         inlineData: {
           mimeType: "image/jpeg",
@@ -381,14 +366,41 @@ IMPORTANT: Only edit the main/centered person. Preserve their face, skin tone, b
       });
     }
 
-    // Add person photo
-    parts.push({ text: "PERSON TO EDIT:" });
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: userPhotoBase64,
-      },
-    });
+    const categories = clothingItems.map(item => item.category);
+    const hasFullBody = categories.includes("Full Body");
+
+    // Build smart replacement instructions based on categories
+    let replacementInstructions: string;
+    if (hasFullBody) {
+      const fullBodyDesc = getRootPromptDescription("Full Body");
+      const otherCategories = categories.filter(c => c !== "Full Body");
+      if (otherCategories.length > 0) {
+        const otherDescriptions = otherCategories.map(c => getRootPromptDescription(c));
+        replacementInstructions = `Replace the person's top and bottom with the ${fullBodyDesc}, and also replace their ${otherDescriptions.join(" and ")}.`;
+      } else {
+        replacementInstructions = `Replace the person's top and bottom with the ${fullBodyDesc}.`;
+      }
+    } else {
+      const categoryDescriptions = categories.map(c => getRootPromptDescription(c));
+      const hasTop = categories.includes("Top");
+      const hasOuterwear = categories.includes("Outerwear");
+
+      const removeOuterwearNote = hasTop && !hasOuterwear
+        ? " Remove any jacket or outerwear layer so the new top is fully visible."
+        : "";
+
+      replacementInstructions = `Replace ONLY the person's ${categoryDescriptions.join(" and ")} with the items shown. Keep all OTHER clothing exactly as in the original.${removeOuterwearNote}`;
+    }
+
+    prompt = `Virtual try-on: ${replacementInstructions}
+
+IDENTITY PRESERVED: The output must show the exact same person from the first image - same face, same facial features, same skin tone, same hair. This is the same individual, not a different model.
+
+Keep their exact pose and the original background. Match lighting and shadows naturally.
+
+CRITICAL: If there are multiple people, focus ONLY on the main/centered person and remove others. Output same resolution and aspect ratio. Do not crop or rotate.`;
+
+    parts.push({ text: prompt });
   } else {
     throw new Error("No clothing items or outfit provided");
   }

@@ -1,7 +1,7 @@
 import sharp from "sharp";
 
 /**
- * Gemini 2.5 Flash Image outputs max 1024px, so sending larger is wasteful.
+ * Gemini 3 Pro Image outputs max 1024px, so sending larger is wasteful.
  * We use 1280px to give the model slightly more detail to work with.
  */
 const DEFAULT_MAX_DIMENSION = 1280;

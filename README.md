@@ -81,7 +81,7 @@ Catalog your clothes, generate outfit compositions, and virtually try on your wa
 | **Styling** | Tailwind CSS + shadcn/ui + Radix UI |
 | **Auth & DB** | Supabase (PostgreSQL with RLS) |
 | **Storage** | Supabase Storage |
-| **AI** | Google Gemini 2.5 Flash |
+| **AI** | Google Gemini 3 Pro Image (Nano Banana Pro) |
 | **i18n** | next-intl |
 
 ---

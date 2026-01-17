@@ -18,7 +18,7 @@ Package manager: **pnpm 10.14.0**
 - **Framework:** Next.js 15 (App Router) with TypeScript
 - **UI:** shadcn/ui + Radix UI + Tailwind CSS
 - **Backend:** Supabase (auth, database with RLS, storage)
-- **AI:** Google Gemini 2.5 Flash Image model
+- **AI:** Google Gemini 3 Pro Image (Nano Banana Pro)
 - **i18n:** next-intl (English, Portuguese)
 
 ## Architecture Overview
