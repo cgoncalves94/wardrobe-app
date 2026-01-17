@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Loader2 } from "lucide-react";
 import LoginLanguageSwitcher from "@/components/LoginLanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -81,7 +82,8 @@ export default function LoginPage() {
 
       {/* Right - Form */}
       <div className="flex items-center justify-center p-8 bg-white dark:bg-neutral-950 relative">
-        <div className="absolute top-6 right-6">
+        <div className="absolute top-6 right-6 flex items-center gap-1">
+          <ThemeToggle />
           <LoginLanguageSwitcher />
         </div>
 
