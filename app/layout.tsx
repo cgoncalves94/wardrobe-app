@@ -8,6 +8,7 @@ import AnalyticsWrapper from "@/components/AnalyticsWrapper";
 export const metadata: Metadata = {
   title: "Wardrobe",
   description: "Your personal wardrobe assistant",
+  colorScheme: "dark light",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0f" },
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
@@ -21,7 +22,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
-        <meta name="color-scheme" content="dark light" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
