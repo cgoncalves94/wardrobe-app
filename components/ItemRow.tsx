@@ -119,6 +119,7 @@ export default function ItemRow<T extends BaseItem>({
               <button
                 key={item.id}
                 type="button"
+                aria-label={`${isSelected ? 'Deselect' : 'Select'} ${item.name}`}
                 onClick={() => handleSelect(item)}
                 disabled={disabled}
                 className={`relative flex-shrink-0 w-[84px] h-[84px] sm:w-[98px] sm:h-[98px] lg:w-[112px] lg:h-[112px] rounded-xl overflow-hidden snap-start transition-all duration-200 ${

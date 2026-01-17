@@ -1,132 +1,206 @@
-# Wardrobe App
+<div align="center">
 
-AI-powered wardrobe manager built with **Next.js 15 + Tailwind + shadcn/ui + Supabase + Google Gemini**.
+# ✨ Wardrobe
 
-Catalog your clothes, organize by categories, generate outfit compositions, and virtually try on your wardrobe items.
+**Your AI-powered personal wardrobe assistant**
 
-## Features
+Catalog your clothes, generate outfit compositions, and virtually try on your wardrobe items — all powered by Google Gemini.
 
-### Core
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database-3ecf8e?style=flat-square&logo=supabase)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-- **Categories**: Organize items under 6 root types (Headwear, Top, Bottom, Full Body, Footwear, Accessories)
-- **Items Gallery**: Upload photos, assign categories, mark favorites, filter and paginate
+[Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [Deployment](#-deployment)
 
-### AI Generation (Pro)
+</div>
 
-- **Outfit Generator**: Select wardrobe items and generate styled outfit compositions
+---
+
+## 🎯 Features
+
+### 📸 Wardrobe Management
+
+- **Smart Categories** — Organize items by type: Headwear, Tops, Bottoms, Full Body, Footwear, Accessories
+- **Image Gallery** — Upload photos, mark favorites, filter and browse with pagination
+- **Quick Search** — Find items instantly across your entire wardrobe
+
+### 🤖 AI-Powered Generation *(Pro)*
+
+- **Outfit Composer** — Select items and generate styled outfit compositions
   - Flat-lay or mannequin display modes
-  - Gender selection for mannequin
-- **AI Picks Mode**: Describe an outfit in text and let Gemini generate it
-  - Style presets: casual, formal, date-night, work, street, cozy, elegant, sporty
-- **Virtual Try-On**: Upload a selfie and overlay your wardrobe items
-  - Preserves face, pose, and background
-  - Works with individual items or complete outfits
+  - Gender-specific mannequin styling
+- **AI Picks** — Describe your desired look and let AI create it
+  - Style presets: casual, formal, date-night, street, cozy, elegant, sporty
+- **Virtual Try-On** — See how clothes look on you
+  - Upload a selfie, overlay any wardrobe item
+  - Preserves your face, pose, and background
 
-### Organization
+### 📁 Organization
 
-- **Outfit Folders**: Group generated outfits into custom folders
-- **Favorites**: Mark items and outfits as favorites for quick access
+- **Smart Folders** — Group outfits into custom collections
+- **Favorites** — Quick access to your best items and looks
 
-### Subscription
+### 🌍 Internationalization
 
-- **Free Tier**: Browse wardrobe, manage categories and items
-- **Pro Tier**: Access AI outfit generation and virtual try-on features
+- English and Portuguese language support
 
-### Internationalization
+---
 
-- English and Portuguese language support via next-intl
+## 🛠 Tech Stack
 
-## Tech Stack
+<table>
+<tr>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=nextjs" width="48" height="48" alt="Next.js" />
+<br>Next.js 15
+</td>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=ts" width="48" height="48" alt="TypeScript" />
+<br>TypeScript
+</td>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=tailwind" width="48" height="48" alt="Tailwind" />
+<br>Tailwind
+</td>
+<td align="center" width="96">
+<img src="https://skillicons.dev/icons?i=supabase" width="48" height="48" alt="Supabase" />
+<br>Supabase
+</td>
+<td align="center" width="96">
+<img src="https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304ff6292a690345.svg" width="48" height="48" alt="Gemini" />
+<br>Gemini AI
+</td>
+</tr>
+</table>
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS + shadcn/ui + Radix UI |
-| Auth | Supabase Auth |
-| Database | Supabase (PostgreSQL with RLS) |
-| Storage | Supabase Storage |
-| AI | Google Gemini 2.5 Flash (image generation) |
-| i18n | next-intl |
+| **Framework** | Next.js 15 (App Router) |
+| **Styling** | Tailwind CSS + shadcn/ui + Radix UI |
+| **Auth & DB** | Supabase (PostgreSQL with RLS) |
+| **Storage** | Supabase Storage |
+| **AI** | Google Gemini 2.5 Flash |
+| **i18n** | next-intl |
 
-## Project Structure
+---
 
-```text
-app/
-├── (auth)/           # Login flow
-├── (main)/           # Protected routes
-│   ├── categories/   # Category management
-│   ├── items/        # Wardrobe gallery
-│   ├── outfits/      # Generated outfits, generation UI, try-on
-│   └── upgrade/      # Pro subscription page
-└── api/ai/           # AI generation endpoints
-
-components/           # React components (galleries, forms, navigation)
-lib/
-├── categories.ts     # Category definitions (single source of truth)
-├── features.ts       # Pro feature gating
-├── supabase/         # Database clients
-├── gemini/           # AI generation logic
-└── images.ts         # Image processing utilities
-
-messages/             # i18n translations (en.json, pt.json)
-supabase/schema.sql   # Database schema with RLS policies
-```
-
-## Setup
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
 - pnpm 10+
-- Supabase account
-- Google AI Studio API key
+- [Supabase](https://supabase.com) account
+- [Google AI Studio](https://aistudio.google.com) API key
 
-### Installation
+### Quick Start
 
 ```bash
+# Clone and install
+git clone https://github.com/cgoncalves94/wardrobe-app.git
+cd wardrobe-app
 pnpm install
+
+# Configure environment
 cp .env.local.example .env.local
-# Fill in your environment variables
-pnpm dev
 ```
 
-### Environment Variables
+Add your credentials to `.env.local`:
 
-```bash
+```env
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 GEMINI_API_KEY=your-gemini-api-key
 ```
 
-## Supabase Setup
+```bash
+# Start development server
+pnpm dev
+```
 
-1. Create a new Supabase project
+Open [http://localhost:3000](http://localhost:3000) to see the app.
+
+### Database Setup
+
+1. Create a new [Supabase project](https://app.supabase.com)
 2. Run the SQL from `supabase/schema.sql` in the SQL Editor
-3. The schema creates:
-   - `categories` - Clothing categories with root types
-   - `items` - Wardrobe items with images
-   - `outfits` - Generated outfit/try-on images
-   - `outfit_folders` - Folder organization for outfits
-   - `user_subscriptions` - Subscription tier tracking
-   - `wardrobe` storage bucket (public read)
-   - RLS policies for user data isolation
-   - Auto-create free subscription trigger for new users
+3. This creates all tables, storage buckets, and RLS policies
 
-## Development
+<details>
+<summary>📋 Database Schema</summary>
+
+| Table | Purpose |
+|-------|---------|
+| `categories` | Clothing categories with root types |
+| `items` | Wardrobe items with images |
+| `outfits` | Generated outfit/try-on images |
+| `outfit_folders` | Folder organization |
+| `user_selfies` | Stored selfies for try-on |
+| `user_subscriptions` | Subscription tier tracking |
+
+All tables have RLS policies for user data isolation.
+
+</details>
+
+---
+
+## 📁 Project Structure
+
+```
+app/
+├── (auth)/           # Login flow
+├── (main)/           # Protected routes
+│   ├── categories/   # Category management
+│   ├── items/        # Wardrobe gallery
+│   ├── outfits/      # Generation & try-on
+│   └── upgrade/      # Pro subscription
+└── api/ai/           # AI endpoints
+
+components/           # UI components
+lib/
+├── categories.ts     # Category definitions
+├── features.ts       # Pro feature gating
+├── supabase/         # Database clients
+├── gemini/           # AI generation
+└── images.ts         # Image utilities
+
+messages/             # i18n (en.json, pt.json)
+```
+
+---
+
+## 📜 Scripts
 
 ```bash
-pnpm dev       # Start development server (port 3000)
+pnpm dev       # Start dev server (port 3000)
 pnpm build     # Production build
 pnpm start     # Start production server
 pnpm lint      # Run ESLint
 ```
 
-## Deploy
+---
 
-- **Frontend**: Vercel or any Next.js host
-- **Backend**: Supabase (already hosted)
+## 🌐 Deployment
 
-## License
+| Service | Platform |
+|---------|----------|
+| Frontend | [Vercel](https://vercel.com) (recommended) |
+| Backend | [Supabase](https://supabase.com) (hosted) |
 
-MIT
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/cgoncalves94/wardrobe-app)
+
+---
+
+## 📄 License
+
+[MIT](LICENSE) © [Cesar Goncalves](https://github.com/cgoncalves94)
+
+---
+
+<div align="center">
+
+**[⬆ Back to top](#-wardrobe)**
+
+</div>

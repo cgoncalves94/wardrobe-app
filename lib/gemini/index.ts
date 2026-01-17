@@ -305,11 +305,11 @@ export async function generateTryOnImage(options: TryOnOptions): Promise<{
 
   if (mode === "outfits" && outfitImageBase64) {
     // OUTFIT MODE: Replace the entire outfit
-    prompt = `Replace ALL clothing on the person with the complete outfit shown in the first image. The first image shows a full outfit - use it to dress the person completely. Keep the person's face, hair, pose, and background exactly the same. Replace everything they're wearing with this outfit.
+    prompt = `Replace ALL clothing on the MAIN PERSON (the most centered/prominent person) with the complete outfit shown in the first image. The first image shows a full outfit - use it to dress the main person only. Keep their face, hair, pose, and background exactly the same. Replace everything they're wearing with this outfit.
 
 Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
 
-IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
+IMPORTANT: Focus ONLY on the main/centered person. Preserve their face, skin tone, body shape, and pose EXACTLY. REMOVE any other people from the image completely - fill their area with the background. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
 
     parts.push({ text: prompt });
 
@@ -360,11 +360,13 @@ IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. 
       replacementInstructions = `Replace ONLY the person's ${categoryDescriptions.join(" and ")} with the items shown. Keep all OTHER clothing exactly as it appears in the original photo.${removeOuterwearNote}`;
     }
 
-    prompt = `${replacementInstructions} Keep the person's face, hair, pose, and background exactly the same.
+    prompt = `Focus ONLY on the MAIN PERSON (the most centered/prominent person in the photo).
+
+${replacementInstructions} Keep the main person's face, hair, pose, and background exactly the same.
 
 Match the lighting and shadows on the new clothes to the original scene. The result should look natural and realistic - clothes should look worn on the body with proper fabric drape and folds, not digitally pasted.
 
-IMPORTANT: Preserve the person's face, skin tone, body shape, and pose EXACTLY. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
+IMPORTANT: Only edit the main/centered person. Preserve their face, skin tone, body shape, and pose EXACTLY. REMOVE any other people from the image completely - fill their area with the background. Output at the same resolution and aspect ratio. Do not crop, resize, or rotate.`;
 
     parts.push({ text: prompt });
 

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Settings, LogOut } from "lucide-react";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import ThemeToggle from "@/components/ThemeToggle";
 import LogoutButton from "@/components/auth/LogoutButton";
 import { useLogout } from "@/hooks/use-logout";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -96,7 +97,8 @@ export default function Header({ currentLocale }: Props) {
           >
             {t("nav.categories")}
           </Link>
-          <div className="ml-3 pl-3 border-l border-border/50 flex items-center gap-3">
+          <div className="ml-3 pl-3 border-l border-border/50 flex items-center gap-2">
+            <ThemeToggle />
             <LanguageSwitcher currentLocale={currentLocale} />
             <LogoutButton />
           </div>
@@ -114,10 +116,14 @@ export default function Header({ currentLocale }: Props) {
           </button>
 
           {settingsOpen && (
-            <div className="absolute right-0 top-full mt-2 py-1 rounded-xl border border-border bg-background shadow-lg">
+            <div className="absolute right-0 top-full mt-2 py-1 rounded-xl border border-border bg-background shadow-lg min-w-[160px]">
               <div className="px-3 py-2.5">
                 <LanguageSwitcher currentLocale={currentLocale} />
               </div>
+
+              <div className="border-t border-border" />
+
+              <ThemeToggle showLabel label={t("nav.theme")} />
 
               <div className="border-t border-border" />
 
