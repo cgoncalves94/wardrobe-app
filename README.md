@@ -195,7 +195,7 @@ pnpm lint      # Run ESLint
 
 ## 📄 License
 
-MIT © [Cesar Goncalves](https://github.com/cgoncalves94)
+[MIT](LICENSE) © [Cesar Goncalves](https://github.com/cgoncalves94)
 
 ---
 
