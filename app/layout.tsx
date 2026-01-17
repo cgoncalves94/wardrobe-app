@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "next-themes";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -8,6 +8,9 @@ import AnalyticsWrapper from "@/components/AnalyticsWrapper";
 export const metadata: Metadata = {
   title: "Wardrobe",
   description: "Your personal wardrobe assistant",
+};
+
+export const viewport: Viewport = {
   colorScheme: "dark light",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0f" },

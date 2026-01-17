@@ -36,7 +36,8 @@
     "add": "Adicionar",
     "logout": "Sair",
     "menu": "Menu",
-    "settings": "Configurações"
+    "settings": "Configurações",
+    "theme": "Tema"
   },
   "auth": {
     "welcomeBack": "Bem-vindo de volta",
