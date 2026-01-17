@@ -63,13 +63,14 @@ export async function POST(request: NextRequest) {
 
       const imageMap: Record<string, string> = {};
 
-      for (const item of items || []) {
-        if (!item.image_url) continue;
-
-        const base64 = await fetchImageAsBase64(item.image_url, `item ${item.id}`);
-        if (base64) {
-          imageMap[item.id] = base64;
-        }
+      const imageResults = await Promise.all(
+        (items || []).map(async (item) => ({
+          id: item.id,
+          base64: item.image_url ? await fetchImageAsBase64(item.image_url, `item ${item.id}`) : null
+        }))
+      );
+      for (const result of imageResults) {
+        if (result.base64) imageMap[result.id] = result.base64;
       }
 
       if (Object.keys(imageMap).length === 0) {
