@@ -4,6 +4,7 @@ import { generateTryOnImage } from "@/lib/gemini";
 import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
 import { fetchImageAsBase64 } from "@/lib/images";
+import { handleAIGenerationError } from "@/lib/api-helpers";
 
 /**
  * Generate virtual try-on image via Gemini AI
@@ -177,27 +178,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Generate try-on error:", error);
-
-    const message = error instanceof Error ? error.message : "Failed to generate try-on";
-    const errorWithStatus = error as { status?: number };
-
-    if (errorWithStatus.status === 429 || message.includes("429") || message.includes("quota")) {
-      return NextResponse.json(
-        { error: "Rate limit reached. Please wait 30 seconds and try again." },
-        { status: 429 }
-      );
-    }
-
-    // Sanitize 503/50x or other unhandled errors so the frontend shows a nice message
-    const isServiceUnavailable = errorWithStatus.status === 503 || message.includes("503") || message.includes("unavailable");
-    const friendlyMessage = isServiceUnavailable 
-      ? "Our AI styling engine is currently experiencing high demand. Please try again in a few moments."
-      : "Failed to generate try-on image. Please try again.";
-
-    return NextResponse.json(
-      { error: friendlyMessage },
-      { status: isServiceUnavailable ? 503 : 500 }
-    );
+    return handleAIGenerationError(error, "try-on image");
   }
 }

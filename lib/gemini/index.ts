@@ -30,16 +30,13 @@ async function withRetry<T>(
       const sdkError = error as SdkError;
 
       // Check if it's a rate limit (429) or server error (50x)
-      const isRetryable = sdkError.status === 429 ||
-                    (sdkError.status && sdkError.status >= 500) ||
-                    lastError.message?.includes("429") ||
-                    lastError.message?.includes("503") ||
-                    lastError.message?.includes("500") ||
-                    lastError.message?.includes("502") ||
-                    lastError.message?.includes("504") ||
-                    lastError.message?.includes("quota") ||
-                    lastError.message?.includes("RESOURCE_EXHAUSTED") ||
-                    lastError.message?.includes("unavailable");
+      const retryableSubstrings = [
+        "429", "503", "500", "502", "504", "quota", "RESOURCE_EXHAUSTED", "unavailable"
+      ];
+      const isRetryable = 
+        sdkError.status === 429 ||
+        (sdkError.status && sdkError.status >= 500) ||
+        (lastError?.message && retryableSubstrings.some((s) => lastError?.message?.includes(s)));
 
       if (!isRetryable || attempt === maxRetries) {
         throw lastError;
