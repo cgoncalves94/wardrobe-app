@@ -189,9 +189,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Sanitize 503/50x or other unhandled errors so the frontend shows a nice message
+    const isServiceUnavailable = errorWithStatus.status === 503 || message.includes("503") || message.includes("unavailable");
+    const friendlyMessage = isServiceUnavailable 
+      ? "Our AI styling engine is currently experiencing high demand. Please try again in a few moments."
+      : "Failed to generate try-on image. Please try again.";
+
     return NextResponse.json(
-      { error: message },
-      { status: 500 }
+      { error: friendlyMessage },
+      { status: isServiceUnavailable ? 503 : 500 }
     );
   }
 }

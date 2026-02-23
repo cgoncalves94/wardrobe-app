@@ -29,13 +29,19 @@ async function withRetry<T>(
       lastError = error instanceof Error ? error : new Error(String(error));
       const sdkError = error as SdkError;
 
-      // Check if it's a rate limit error (429)
-      const is429 = sdkError.status === 429 ||
+      // Check if it's a rate limit (429) or server error (50x)
+      const isRetryable = sdkError.status === 429 ||
+                    (sdkError.status && sdkError.status >= 500) ||
                     lastError.message?.includes("429") ||
+                    lastError.message?.includes("503") ||
+                    lastError.message?.includes("500") ||
+                    lastError.message?.includes("502") ||
+                    lastError.message?.includes("504") ||
                     lastError.message?.includes("quota") ||
-                    lastError.message?.includes("RESOURCE_EXHAUSTED");
+                    lastError.message?.includes("RESOURCE_EXHAUSTED") ||
+                    lastError.message?.includes("unavailable");
 
-      if (!is429 || attempt === maxRetries) {
+      if (!isRetryable || attempt === maxRetries) {
         throw lastError;
       }
 
@@ -46,12 +52,38 @@ async function withRetry<T>(
         delay = Math.ceil(parseFloat(retryMatch[1]) * 1000) + 1000; // Add 1s buffer
       }
 
-      console.log(`Rate limited. Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+      console.log(`Retryable error (${sdkError.status || "network"}). Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 
   throw lastError;
+}
+
+/**
+ * Execute a Gemini request with automatic fallback to secondary models if the primary fails.
+ * Wraps the execution with our existing retry logic for each model attempt.
+ */
+async function withFallback<T>(
+  executionFn: (modelName: string) => Promise<T>,
+  models: string[] = ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"]
+): Promise<T> {
+  let lastError: Error | undefined;
+
+  for (const model of models) {
+    try {
+      console.log(`[Gemini] Attempting generation with model: ${model}`);
+      // Apply the existing retry logic to EACH model attempt
+      return await withRetry(() => executionFn(model));
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(`[Gemini] Model ${model} failed:`, lastError.message);
+      // Continue to the next model in the fallback chain
+    }
+  }
+
+  // If we exhausted all models, throw the last error
+  throw lastError || new Error("All Gemini models failed");
 }
 
 export type { OutfitStyle, MannequinGender } from "./types";
@@ -190,10 +222,10 @@ Each garment preserves its exact appearance from the reference. Every piece laid
 
   parts.push({ text: prompt });
 
-  // Call Gemini API with retry logic for rate limits
-  const response = await withRetry(() =>
+  // Call Gemini API with fallback and retry logic
+  const response = await withFallback((model) =>
     ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
+      model: model,
       contents: [{ role: "user", parts }],
       config: {
         responseModalities: ["TEXT", "IMAGE"],
@@ -266,10 +298,10 @@ NO extras unless explicitly requested.`;
 
   const parts: any[] = [{ text: prompt }];
 
-  // Call Gemini API with retry logic for rate limits
-  const response = await withRetry(() =>
+  // Call Gemini API with fallback and retry logic
+  const response = await withFallback((model) =>
     ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
+      model: model,
       contents: [{ role: "user", parts }],
       config: {
         responseModalities: ["TEXT", "IMAGE"],
@@ -411,10 +443,10 @@ CRITICAL: If there are multiple people, focus ONLY on the main/centered person a
     .reduce((sum: number, p: any) => sum + (p.inlineData?.data?.length || 0), 0);
   console.log(`[Gemini][TryOn] Total base64 size: ${(totalBase64Size / 1024 / 1024).toFixed(2)}MB, parts: ${parts.length}`);
 
-  // Call Gemini API with retry logic for rate limits
-  const response = await withRetry(() =>
+  // Call Gemini API with fallback and retry logic
+  const response = await withFallback((model) =>
     ai.models.generateContent({
-      model: "gemini-3-pro-image-preview",
+      model: model,
       contents: [{ role: "user", parts }],
       config: {
         responseModalities: ["TEXT", "IMAGE"],
