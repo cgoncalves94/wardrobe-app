@@ -4,6 +4,7 @@ import { generateOutfitImage, generateOutfitFromPrompt, OutfitStyle, MannequinGe
 import { isProRoute } from "@/lib/features";
 import { isProUser } from "@/lib/supabase/subscription";
 import { fetchImageAsBase64 } from "@/lib/images";
+import { handleAIGenerationError } from "@/lib/api-helpers";
 
 /**
  * Generate outfit image via Gemini AI
@@ -120,21 +121,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Generate outfit error:", error);
-
-    const message = error instanceof Error ? error.message : "Failed to generate outfit";
-    const errorWithStatus = error as { status?: number };
-
-    if (errorWithStatus.status === 429 || message.includes("429") || message.includes("quota")) {
-      return NextResponse.json(
-        { error: "Rate limit reached. Please wait 30 seconds and try again." },
-        { status: 429 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+    return handleAIGenerationError(error, "outfit");
   }
 }
