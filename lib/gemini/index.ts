@@ -17,7 +17,7 @@ interface SdkError extends Error {
  */
 async function withRetry<T>(
   fn: () => Promise<T>,
-  maxRetries = 3,
+  maxRetries = 1,
   initialDelay = 8000
 ): Promise<T> {
   let lastError: Error | undefined;
@@ -63,7 +63,7 @@ async function withRetry<T>(
  */
 async function withFallback<T>(
   executionFn: (modelName: string) => Promise<T>,
-  models: string[] = ["gemini-3-pro-image-preview", "gemini-2.5-flash-image"]
+  models: string[] = ["gemini-2.5-flash-image"]
 ): Promise<T> {
   let lastError: Error | undefined;
 
